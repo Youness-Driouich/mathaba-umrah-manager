@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  STAFF
+  AGENT
+}
+
+enum Currency {
+  MAD
+  SAR
+  EUR
+}
+
+enum VehicleType {
+  SEDAN
+  GMC
+  STARIA
+  HIACE
+  COASTER
+  BUS
+}
+
+enum City {
+  MAKKAH
+  MADINAH
+}
+
+enum RoomCategory {
+  SINGLE
+  DOUBLE
+  TRIPLE
+  QUAD
+}
+
+enum CostAllocationType {
+  PER_PERSON
+  GROUP_TOTAL
+}
+
+enum TripStatus {
+  DRAFT
+  ACTIVE
+  FINALIZED
+  ARCHIVED
+}
+
+enum QuoteStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum CustomizationType {
+  ADD_PRIVATE_TRANSPORT
+  REMOVE_SERVICE
+  REPLACE_SERVICE
+  ADDON
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         Role      @default(STAFF)
+  isActive     Boolean   @default(true)
+  sessions     Session[]
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  @@map("sessions")
+}
+
+model GlobalSetting {
+  id                 String   @id @default("default")
+  agencyName         String   @default("Mathaba Umrah Services")
+  agencyLogoUrl      String?
+  agencyPhone        String?
+  agencyEmail        String?
+  agencyAddress      String?
+  defaultVisaCostSar Decimal  @default(525.00) @db.Decimal(10, 2)
+  sarToMadRate       Decimal  @default(2.70) @db.Decimal(10, 4)
+  eurToMadRate       Decimal  @default(10.85) @db.Decimal(10, 4)
+  updatedAt          DateTime @updatedAt
+
+  @@map("global_settings")
+}
+
+model GlobalTransportCatalogItem {
+  id          String      @id @default(uuid())
+  routeName   String
+  vehicleType VehicleType
+  capacity    Int
+  baseCostSar Decimal     @db.Decimal(10, 2)
+  notes       String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("global_transport_catalog")
+}
+
+model GlobalServiceCatalogItem {
+  id              String   @id @default(uuid())
+  serviceName     String
+  defaultCost     Decimal  @db.Decimal(10, 2)
+  defaultCurrency Currency @default(SAR)
+  category        String?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("global_service_catalog")
+}
+
+model UmrahTrip {
+  id                   String             @id @default(uuid())
+  name                 String
+  slug                 String             @unique
+  startDate            DateTime
+  endDate              DateTime
+  expectedPilgrims     Int                @default(40)
+  flightCost           Decimal            @default(0.00) @db.Decimal(10, 2)
+  flightCurrency       Currency           @default(MAD)
+  flightAllocationType CostAllocationType @default(PER_PERSON)
+  sarToMadRate         Decimal            @default(2.70) @db.Decimal(10, 4)
+  eurToMadRate         Decimal            @default(10.85) @db.Decimal(10, 4)
+  groupBusCostSar      Decimal            @default(0.00) @db.Decimal(10, 2)
+  groupBusCount        Int                @default(1)
+  status               TripStatus         @default(DRAFT)
+  notes                String?
+  offers               Offer[]
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@map("umrah_trips")
+}
+
+model Offer {
+  id              String                   @id @default(uuid())
+  tripId          String
+  trip            UmrahTrip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name            String
+  fixedProfitMad  Decimal                  @default(2000.00) @db.Decimal(10, 2)
+  isActive        Boolean                  @default(true)
+  notes           String?
+  hotelStays      OfferHotelStay[]
+  services        OfferService[]
+  trainExpenses   OfferTrainExpense[]
+  individualQuotes IndividualPilgrimQuote[]
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+
+  @@map("offers")
+}
+
+model OfferHotelStay {
+  id                 String       @id @default(uuid())
+  offerId            String
+  offer              Offer        @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  city               City
+  hotelName          String
+  checkInDate        DateTime
+  checkOutDate       DateTime
+  nightsCount        Int
+  isNightsOverridden Boolean      @default(false)
+  singleDoubleRateSar Decimal     @db.Decimal(10, 2)
+  tripleRateSar      Decimal      @db.Decimal(10, 2)
+  quadRateSar        Decimal      @db.Decimal(10, 2)
+  notes              String?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  @@map("offer_hotel_stays")
+}
+
+model OfferService {
+  id         String             @id @default(uuid())
+  offerId    String
+  offer      Offer              @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  serviceName String
+  costAmount Decimal            @db.Decimal(10, 2)
+  currency   Currency           @default(SAR)
+  costScope  CostAllocationType @default(PER_PERSON)
+  notes      String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  @@map("offer_services")
+}
+
+model OfferTrainExpense {
+  id             String   @id @default(uuid())
+  offerId        String
+  offer          Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  routeName      String
+  ticketPriceSar Decimal  @db.Decimal(10, 2)
+  passengerCount Int      @default(1)
+  isIncluded     Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("offer_train_expenses")
+}
+
+model IndividualPilgrimQuote {
+  id                     String                    @id @default(uuid())
+  offerId                String
+  offer                  Offer                     @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  pilgrimName            String
+  contactPhone           String?
+  roomCategory           RoomCategory              @default(DOUBLE)
+  overrideProfitMad      Decimal?                  @db.Decimal(10, 2)
+  commercialDiscountMad  Decimal                   @default(0.00) @db.Decimal(10, 2)
+  arbitraryAdjustmentMad Decimal                   @default(0.00) @db.Decimal(10, 2)
+  adjustmentReason       String?
+  snapshotData           Json?
+  status                 QuoteStatus               @default(DRAFT)
+  customizations         QuoteCustomizationItem[]
+  createdAt              DateTime                  @default(now())
+  updatedAt              DateTime                  @updatedAt
+
+  @@map("individual_pilgrim_quotes")
+}
+
+model QuoteCustomizationItem {
+  id                  String                 @id @default(uuid())
+  quoteId             String
+  quote               IndividualPilgrimQuote @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  type                CustomizationType
+  description         String
+  supplierCostDeltaMad Decimal               @default(0.00) @db.Decimal(10, 2)
+  sellingPriceDeltaMad Decimal               @default(0.00) @db.Decimal(10, 2)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@map("quote_customization_items")
+}
