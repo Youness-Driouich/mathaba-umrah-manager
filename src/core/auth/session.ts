@@ -10,7 +10,7 @@ export const AUTH_COOKIE_NAME = "mathaba_session";
  */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get(AUTH_COOKIE_NAME)?.value;
 
     if (!token) {

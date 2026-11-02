@@ -6,9 +6,16 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("🌱 Starting Mathaba Umrah Manager database seed...");
 
-  // 1. Create or ensure Initial Administrator Account
+  // 1. Create or ensure Initial Administrator Account securely
   const adminEmail = process.env.INITIAL_ADMIN_EMAIL || "admin@mathaba.agency";
-  const rawPassword = process.env.INITIAL_ADMIN_PASSWORD || "Admin@Mathaba2026!";
+  const rawPassword = process.env.INITIAL_ADMIN_PASSWORD;
+
+  if (!rawPassword) {
+    throw new Error(
+      "❌ Security Error: INITIAL_ADMIN_PASSWORD environment variable is required. Hardcoded default passwords are prohibited."
+    );
+  }
+
   const passwordHash = await bcrypt.hash(rawPassword, 12);
 
   const admin = await prisma.user.upsert({
@@ -51,59 +58,91 @@ async function main() {
   const sampleRoutes = [
     {
       routeName: "Jeddah Airport -> Makkah Hotel",
+      origin: "Jeddah Airport (KAIA)",
+      destination: "Makkah Hotel",
       vehicleType: VehicleType.BUS,
-      capacity: 49,
+      capacity: 47,
       baseCostSar: 1200.0,
-      notes: "Standard air-conditioned 49-seater coach",
+      vatIncluded: true,
+      seasonalNote: "Standard season rate; Ramadan & peak season subject to seasonal adjustment",
+      notes: "Standard air-conditioned 47-seater coach",
     },
     {
       routeName: "Jeddah Airport -> Makkah Hotel",
+      origin: "Jeddah Airport (KAIA)",
+      destination: "Makkah Hotel",
       vehicleType: VehicleType.GMC,
       capacity: 7,
       baseCostSar: 650.0,
-      notes: "VIP Suburban / Yukon XL private transfer",
+      vatIncluded: true,
+      seasonalNote: "Standard rate",
+      notes: "VIP Suburban / Yukon XL private transfer (7 passengers)",
     },
     {
       routeName: "Jeddah Airport -> Makkah Hotel",
+      origin: "Jeddah Airport (KAIA)",
+      destination: "Makkah Hotel",
       vehicleType: VehicleType.STARIA,
       capacity: 7,
       baseCostSar: 450.0,
-      notes: "Hyundai Staria private minivan",
+      vatIncluded: true,
+      seasonalNote: "Standard rate",
+      notes: "Hyundai Staria private minivan (7 passengers)",
     },
     {
       routeName: "Jeddah Airport -> Makkah Hotel",
+      origin: "Jeddah Airport (KAIA)",
+      destination: "Makkah Hotel",
       vehicleType: VehicleType.SEDAN,
       capacity: 4,
       baseCostSar: 350.0,
-      notes: "Private standard sedan (Camry / Sonata)",
+      vatIncluded: true,
+      seasonalNote: "Standard rate",
+      notes: "Private standard sedan (Camry / Sonata - 4 passengers)",
     },
     {
       routeName: "Makkah Hotel -> Madinah Hotel",
+      origin: "Makkah Hotel",
+      destination: "Madinah Hotel",
       vehicleType: VehicleType.BUS,
-      capacity: 49,
+      capacity: 47,
       baseCostSar: 1600.0,
-      notes: "Intercity coach transfer Makkah to Madinah",
+      vatIncluded: true,
+      seasonalNote: "Intercity rate",
+      notes: "Intercity coach transfer Makkah to Madinah (47 passengers)",
     },
     {
       routeName: "Makkah Hotel -> Madinah Hotel",
+      origin: "Makkah Hotel",
+      destination: "Madinah Hotel",
       vehicleType: VehicleType.GMC,
       capacity: 7,
       baseCostSar: 1200.0,
-      notes: "Private VIP transfer Makkah to Madinah",
+      vatIncluded: true,
+      seasonalNote: "Intercity VIP rate",
+      notes: "Private VIP transfer Makkah to Madinah (7 passengers)",
     },
     {
       routeName: "Madinah Hotel -> Madinah Airport",
+      origin: "Madinah Hotel",
+      destination: "Madinah Airport (MED)",
       vehicleType: VehicleType.BUS,
-      capacity: 49,
+      capacity: 47,
       baseCostSar: 900.0,
-      notes: "Standard airport departure coach",
+      vatIncluded: true,
+      seasonalNote: "Standard rate",
+      notes: "Standard airport departure coach (47 passengers)",
     },
     {
       routeName: "Madinah Hotel -> Madinah Airport",
+      origin: "Madinah Hotel",
+      destination: "Madinah Airport (MED)",
       vehicleType: VehicleType.GMC,
       capacity: 7,
       baseCostSar: 400.0,
-      notes: "Private VIP departure transfer",
+      vatIncluded: true,
+      seasonalNote: "Standard rate",
+      notes: "Private VIP departure transfer (7 passengers)",
     },
   ];
 

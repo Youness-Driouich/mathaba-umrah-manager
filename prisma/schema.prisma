@@ -107,15 +107,19 @@ model GlobalSetting {
 }
 
 model GlobalTransportCatalogItem {
-  id          String      @id @default(uuid())
-  routeName   String
-  vehicleType VehicleType
-  capacity    Int
-  baseCostSar Decimal     @db.Decimal(10, 2)
-  notes       String?
-  isActive    Boolean     @default(true)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id           String      @id @default(uuid())
+  routeName    String
+  origin       String?
+  destination  String?
+  vehicleType  VehicleType
+  capacity     Int
+  baseCostSar  Decimal     @db.Decimal(10, 2)
+  notes        String?
+  vatIncluded  Boolean     @default(true)
+  seasonalNote String?
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@map("global_transport_catalog")
 }
@@ -140,6 +144,7 @@ model UmrahTrip {
   startDate            DateTime
   endDate              DateTime
   expectedPilgrims     Int                @default(40)
+  airlineName          String?
   flightCost           Decimal            @default(0.00) @db.Decimal(10, 2)
   flightCurrency       Currency           @default(MAD)
   flightAllocationType CostAllocationType @default(PER_PERSON)

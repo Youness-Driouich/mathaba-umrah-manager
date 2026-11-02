@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Compass, Layers, Settings, Users } from "lucide-react";
+import { LayoutDashboard, Compass, Bus, Settings, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const mobileTabs = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Trips", href: "/trips", icon: Compass },
+  { name: "Transport", href: "/transport-catalog", icon: Bus },
   { name: "Offers", href: "/offers", icon: Layers },
-  { name: "Quotes", href: "/quotes", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

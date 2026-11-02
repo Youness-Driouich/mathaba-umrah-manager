@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Compass,
+  Bus,
   Layers,
   Settings,
   ShieldCheck,
@@ -16,11 +17,12 @@ import { cn } from "@/lib/utils";
 
 const navigationItems = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Umrah Trips", href: "/trips", icon: Compass, badge: "Phase 2" },
+  { name: "Umrah Trips", href: "/trips", icon: Compass },
+  { name: "Transport Catalog", href: "/transport-catalog", icon: Bus },
   { name: "Offers & Packages", href: "/offers", icon: Layers, badge: "Phase 3" },
   { name: "Custom Pilgrim Quotes", href: "/quotes", icon: Users, badge: "Phase 5" },
   { name: "Reports & Documents", href: "/reports", icon: FileSpreadsheet, badge: "Phase 6" },
-  { name: "Global Settings", href: "/settings", icon: Settings, badge: "Phase 2" },
+  { name: "Global Settings", href: "/settings", icon: Settings },
 ];
 
 export function Sidebar() {
