@@ -14,19 +14,21 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navigationItems = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Umrah Trips", href: "/trips", icon: Compass },
-  { name: "Transport Catalog", href: "/transport-catalog", icon: Bus },
-  { name: "Offers & Packages", href: "/offers", icon: Layers, badge: "Phase 3" },
-  { name: "Custom Pilgrim Quotes", href: "/quotes", icon: Users, badge: "Phase 5" },
-  { name: "Reports & Documents", href: "/reports", icon: FileSpreadsheet, badge: "Phase 6" },
-  { name: "Global Settings", href: "/settings", icon: Settings },
-];
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { t, language } = useLanguage();
+
+  const navigationItems = [
+    { name: t("navDashboard"), href: "/", icon: LayoutDashboard },
+    { name: t("navTrips"), href: "/trips", icon: Compass },
+    { name: t("navTransport"), href: "/transport-catalog", icon: Bus },
+    { name: t("navOffers"), href: "/offers", icon: Layers },
+    { name: t("navQuotes"), href: "/quotes", icon: Users, badge: "Phase 5" },
+    { name: t("navReports"), href: "/reports", icon: FileSpreadsheet, badge: "Phase 6" },
+    { name: t("navSettings"), href: "/settings", icon: Settings },
+  ];
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -34,16 +36,18 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="hidden md:flex flex-col w-64 border-r border-slate-200 bg-white min-h-screen">
+    <aside className="hidden md:flex flex-col w-64 border-r border-slate-200 rtl:border-l rtl:border-r-0 bg-white min-h-screen">
       {/* Brand Header */}
       <div className="h-16 px-6 flex items-center gap-3 border-b border-slate-200 bg-emerald-900 text-white">
         <div className="w-8 h-8 rounded-lg bg-emerald-700 border border-emerald-500/50 flex items-center justify-center font-bold text-amber-300">
-          M
+          {language === "ar" ? "م" : "M"}
         </div>
         <div>
-          <h1 className="font-bold text-base leading-tight tracking-wide">MATHABA</h1>
+          <h1 className="font-bold text-base leading-tight tracking-wide">
+            {language === "ar" ? "مَثابة" : "MATHABA"}
+          </h1>
           <p className="text-[10px] text-emerald-200/80 uppercase tracking-wider font-medium">
-            Umrah Manager
+            {language === "ar" ? "لإدارة العمرة" : "Umrah Manager"}
           </p>
         </div>
       </div>
@@ -51,13 +55,13 @@ export function Sidebar() {
       {/* Nav Menu */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         <div className="px-3 pb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-          Workspace Navigation
+          {language === "ar" ? "القائمة الرئيسية" : "Workspace Navigation"}
         </div>
         {navigationItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
           return (
             <Link
-              key={item.name}
+              key={item.href}
               href={item.href}
               className={cn(
                 "group flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
@@ -90,18 +94,18 @@ export function Sidebar() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs font-semibold text-slate-700">Administrator</span>
+            <span className="text-xs font-semibold text-slate-700">{t("adminBadge")}</span>
           </div>
           <span className="text-[10px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full">
-            Active
+            {t("activeStatus")}
           </span>
         </div>
         <button
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-slate-200 hover:border-rose-200"
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-slate-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-slate-200 hover:border-rose-200 cursor-pointer"
         >
           <LogOut className="w-3.5 h-3.5" />
-          <span>Sign Out</span>
+          <span>{t("signOut")}</span>
         </button>
       </div>
     </aside>

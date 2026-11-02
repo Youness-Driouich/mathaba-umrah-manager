@@ -32,6 +32,8 @@ enum VehicleType {
 enum City {
   MAKKAH
   MADINAH
+  JEDDAH
+  OTHER
 }
 
 enum RoomCategory {

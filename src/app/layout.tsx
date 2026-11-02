@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { LanguageProvider } from "@/lib/i18n/language-context";
 
 export const viewport: Viewport = {
   themeColor: "#047857",
@@ -10,13 +11,13 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Mathaba Umrah Manager — Travel Agency Platform",
-  description: "Umrah package costing, profit calculation, and quotation generation for travel agencies.",
+  title: "مَثابة لإدارة العمرة — Mathaba Umrah Manager",
+  description: "منصة تسعير وحساب تكاليف باقات العمرة وضبط الأرباح وعروض الأسعار",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Mathaba Umrah",
+    title: "مَثابة للعمرة",
   },
   icons: {
     icon: "/icons/icon.svg",
@@ -30,8 +31,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-slate-50 antialiased">{children}</body>
+    <html lang="ar" dir="rtl">
+      <body className="min-h-screen bg-slate-50 antialiased">
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

@@ -4,17 +4,19 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, Compass, Bus, Settings, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const mobileTabs = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Trips", href: "/trips", icon: Compass },
-  { name: "Transport", href: "/transport-catalog", icon: Bus },
-  { name: "Offers", href: "/offers", icon: Layers },
-  { name: "Settings", href: "/settings", icon: Settings },
-];
+import { useLanguage } from "@/lib/i18n/language-context";
 
 export function MobileNav() {
   const pathname = usePathname();
+  const { t } = useLanguage();
+
+  const mobileTabs = [
+    { name: t("navDashboard"), href: "/", icon: LayoutDashboard },
+    { name: t("navTrips"), href: "/trips", icon: Compass },
+    { name: t("navTransport"), href: "/transport-catalog", icon: Bus },
+    { name: t("navOffers"), href: "/offers", icon: Layers },
+    { name: t("navSettings"), href: "/settings", icon: Settings },
+  ];
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-md border-t border-slate-200 px-2 py-1.5 shadow-lg safe-area-bottom">
@@ -23,7 +25,7 @@ export function MobileNav() {
           const isActive = pathname === tab.href;
           return (
             <Link
-              key={tab.name}
+              key={tab.href}
               href={tab.href}
               className={cn(
                 "flex flex-col items-center justify-center flex-1 py-1 text-[11px] font-medium transition-colors",
