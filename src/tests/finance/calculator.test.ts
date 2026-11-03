@@ -476,4 +476,201 @@ describe("Mathaba Umrah Manager — Financial Calculation Engine", () => {
       expect(validateVehicleCapacity("GMC", 8, 1).isValid).toBe(false);
     });
   });
+
+  // --- PHASE 5 TESTS: Individual Pilgrim Customizations & 7 Exception Types ---
+  describe("Phase 5 — Individual Pilgrim Exceptions & Financial Engine", () => {
+    const baselineOffer = calculateBaselineOffer({
+      offerName: "Standard Baseline Offer",
+      exchangeRates: standardRates,
+      hotelStays: [
+        {
+          hotelName: "Makkah Clock Royal Tower",
+          city: "MAKKAH",
+          checkInDate: "2026-12-01",
+          checkOutDate: "2026-12-11", // 10 nights
+          singleDoubleNightlyRateSar: 1000,
+          tripleNightlyRateSar: 1200,
+          quadNightlyRateSar: 1500,
+        },
+      ],
+      flight: { amount: 5000, currency: "MAD", allocation: "PER_PERSON" },
+      transportation: { groupBusTotalSar: 4400, groupPilgrimCount: 40 }, // 110 SAR = 297 MAD
+      visaCostSar: 525, // 525 SAR * 2.7 = 1417.5 MAD
+      fixedProfitMadPerPilgrim: 2000,
+    });
+
+    // Baseline Double Room Cost:
+    // Hotel: 5,000 SAR * 2.70 = 13,500 MAD
+    // Flight: 5,000 MAD
+    // Group Bus: 110 SAR * 2.70 = 297 MAD
+    // Visa: 525 SAR * 2.70 = 1,417.5 MAD
+    // Total Cost = 20,214.5 MAD. Profit = 2,000 MAD. Selling Price = 22,214.5 MAD
+    const doubleBase = baselineOffer.roomBreakdowns.DOUBLE;
+    const singleBase = baselineOffer.roomBreakdowns.SINGLE;
+
+    it("Step 2 & 3: Private Vehicle Exception (GMC 600 SAR shared by 3 = 200 SAR/pax) without deducting group bus", () => {
+      // 200 SAR * 2.70 = 540 MAD
+      const customQuote = calculateIndividualQuote("Hajji Ahmed", {
+        baselineBreakdown: doubleBase,
+        customizationItems: [
+          {
+            type: "ADD_PRIVATE_TRANSPORT",
+            description: "Private GMC Jeddah-Makkah for 3 passengers",
+            supplierCostDeltaMad: 540,
+            details: {
+              routeName: "Jeddah Airport - Makkah Hotel",
+              vehicleType: "GMC",
+              vehicleCostSar: 600,
+              passengersSharing: 3,
+              perPersonCostSar: 200,
+              perPersonCostMad: 540,
+            },
+          },
+        ],
+      });
+
+      // New Actual Cost = 20,214.5 + 540 = 20,754.5 MAD
+      expect(customQuote.supplierCostAdditionsMad.toNumber()).toBe(540);
+      expect(customQuote.supplierCostReductionsMad.toNumber()).toBe(0);
+      expect(customQuote.totalEffectiveCostMad.toNumber()).toBe(20754.5);
+      // Group bus is maintained in baseline: 297 MAD
+      expect(doubleBase.groupBusCostMad.toNumber()).toBe(297);
+      // Selling price: 20,754.5 + 2,000 = 22,754.5 MAD
+      expect(customQuote.finalSellingPriceMad.toNumber()).toBe(22754.5);
+      expect(customQuote.netProfitMad.toNumber()).toBe(2000);
+      expect(customQuote.isDeficit).toBe(false);
+    });
+
+    it("Step 4: Service Removal — unrecoverable expense gets 0 cost reduction but can give commercial discount", () => {
+      const quoteUnrecoverable = calculateIndividualQuote("Pilgrim Unrecoverable", {
+        baselineBreakdown: doubleBase,
+        customizationItems: [
+          {
+            type: "REMOVE_SERVICE",
+            description: "Opt-out from pre-paid Makkah Ziyarat (non-refundable from supplier)",
+            supplierCostDeltaMad: 0, // Supplier does not refund
+            details: {
+              originalServiceName: "Makkah Ziyarat",
+              isRecoverable: false,
+              supplierCostReductionMad: 0,
+              commercialDiscountMad: 100, // Courtesy discount granted by agency
+            },
+          },
+        ],
+      });
+
+      // Supplier cost remains unchanged: 20,214.5 MAD
+      expect(quoteUnrecoverable.totalEffectiveCostMad.toNumber()).toBe(20214.5);
+      expect(quoteUnrecoverable.appliedDiscountMad.toNumber()).toBe(100);
+      // Realized profit: 2,000 - 100 = 1,900 MAD
+      expect(customQuoteNetProfit(quoteUnrecoverable)).toBe(1900);
+      // Selling price: 20,214.5 + 2,000 - 100 = 22,114.5 MAD
+      expect(quoteUnrecoverable.finalSellingPriceMad.toNumber()).toBe(22114.5);
+    });
+
+    it("Step 4: Service Removal — genuinely recoverable expense directly reduces actual supplier cost", () => {
+      const quoteRecoverable = calculateIndividualQuote("Pilgrim Recoverable", {
+        baselineBreakdown: doubleBase,
+        customizationItems: [
+          {
+            type: "REMOVE_SERVICE",
+            description: "Cancellation of refundable train ticket",
+            supplierCostDeltaMad: -675, // -250 SAR * 2.70
+            details: {
+              originalServiceName: "Haramain Train Ticket",
+              isRecoverable: true,
+              supplierCostReductionMad: 675,
+            },
+          },
+        ],
+      });
+
+      expect(quoteRecoverable.supplierCostReductionsMad.toNumber()).toBe(675);
+      // Actual cost reduces: 20,214.5 - 675 = 19,539.5 MAD
+      expect(quoteRecoverable.totalEffectiveCostMad.toNumber()).toBe(19539.5);
+      // Selling price: 19,539.5 + 2,000 = 21,539.5 MAD
+      expect(quoteRecoverable.finalSellingPriceMad.toNumber()).toBe(21539.5);
+      expect(quoteRecoverable.netProfitMad.toNumber()).toBe(2000);
+    });
+
+    it("Step 4: Service Replacement reverses recoverable cost and adds replacement cost", () => {
+      const quoteReplaced = calculateIndividualQuote("Pilgrim Upgrade Service", {
+        baselineBreakdown: doubleBase,
+        customizationItems: [
+          {
+            type: "REPLACE_SERVICE",
+            description: "Swap standard breakfast with VIP Luxury Buffet (+300 MAD net delta)",
+            supplierCostDeltaMad: 300, // Replaces 200 MAD with 500 MAD
+            details: {
+              originalServiceName: "Standard Buffet",
+              replacementServiceName: "VIP Luxury Buffet",
+              supplierCostReductionMad: 200,
+              supplierCostAdditionMad: 500,
+            },
+          },
+        ],
+      });
+
+      expect(quoteReplaced.supplierCostAdditionsMad.toNumber()).toBe(300);
+      expect(quoteReplaced.totalEffectiveCostMad.toNumber()).toBe(20514.5);
+      expect(quoteReplaced.finalSellingPriceMad.toNumber()).toBe(22514.5);
+    });
+
+    it("Step 5: Room Category Change (Double ➔ Single) accurately updates accommodation cost", () => {
+      // In Single: Hotel cost = 10,000 SAR * 2.70 = 27,000 MAD (compared to 13,500 MAD in Double)
+      // Total Single Base Cost = 27,000 (hotel) + 5,000 (flight) + 297 (bus) + 1,417.5 (visa) = 33,714.5 MAD
+      expect(singleBase.hotelCostMad.toNumber()).toBe(27000);
+      expect(singleBase.totalActualCostMad.toNumber()).toBe(33714.5);
+
+      const quoteSingle = calculateIndividualQuote("Hajji Solo", {
+        baselineBreakdown: singleBase,
+        overrideProfitMad: 2500, // Custom profit for single
+      });
+
+      expect(quoteSingle.roomCategory).toBe("SINGLE");
+      expect(quoteSingle.totalEffectiveCostMad.toNumber()).toBe(33714.5);
+      expect(quoteSingle.baseProfitMad.toNumber()).toBe(2500);
+      expect(quoteSingle.finalSellingPriceMad.toNumber()).toBe(36214.5);
+      expect(quoteSingle.netProfitMad.toNumber()).toBe(2500);
+      expect(quoteSingle.isDeficit).toBe(false);
+    });
+
+    it("Step 6: Realized Profit, Commercial Discount, and Deficit Warning", () => {
+      // Double Base Cost: 20,214.5 MAD, base profit: 2,000 MAD
+      // Apply discount of 2,500 MAD on 2,000 profit
+      const quoteDeficit = calculateIndividualQuote("Discounted Pilgrim", {
+        baselineBreakdown: doubleBase,
+        commercialDiscountMad: 2500,
+      });
+
+      // Selling price: 20,214.5 + 2,000 - 2,500 = 19,714.5 MAD
+      expect(quoteDeficit.finalSellingPriceMad.toNumber()).toBe(19714.5);
+      // Net Profit: 19,714.5 - 20,214.5 = -500 MAD
+      expect(quoteDeficit.netProfitMad.toNumber()).toBe(-500);
+      // Deficit warning MUST be true
+      expect(quoteDeficit.isDeficit).toBe(true);
+    });
+
+    it("Step 8: Baseline offer snapshot immutability — modifying individual quote leaves baseline intact", () => {
+      const originalDoubleSellingPrice = doubleBase.finalSellingPriceMad.toNumber();
+      expect(originalDoubleSellingPrice).toBe(22214.5);
+
+      // Perform severe customizations on individual quote
+      calculateIndividualQuote("Immunity Test Pilgrim", {
+        baselineBreakdown: doubleBase,
+        commercialDiscountMad: 3000,
+        overrideProfitMad: 10000,
+        privateTransportAddonsMad: 2000,
+      });
+
+      // Baseline offer remains completely unaffected
+      expect(doubleBase.finalSellingPriceMad.toNumber()).toBe(22214.5);
+      expect(doubleBase.configuredProfitMad.toNumber()).toBe(2000);
+      expect(doubleBase.totalActualCostMad.toNumber()).toBe(20214.5);
+    });
+  });
 });
+
+function customQuoteNetProfit(res: any): number {
+  return res.netProfitMad.toNumber();
+}

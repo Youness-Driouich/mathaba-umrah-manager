@@ -26,8 +26,11 @@ import {
   Train,
   ShieldCheck,
   Check,
+  Users,
+  Copy,
+  Eye,
 } from "lucide-react";
-import { City, VehicleType, TrainTicketClass } from "@prisma/client";
+import { City, VehicleType, TrainTicketClass, RoomCategory, QuoteStatus } from "@prisma/client";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { VEHICLE_CAPACITIES, validateVehicleCapacity } from "@/core/finance/calculator";
 
@@ -253,6 +256,121 @@ export default function OfferPricingWorkspacePage() {
     notes: "",
   });
 
+  // --- Individual Quotes State (Phase 5) ---
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [quotesLoading, setQuotesLoading] = useState(false);
+  const [isQuoteModalOpen, setIsQuoteModalOpen] = useState(false);
+  const [quoteSubmitting, setQuoteSubmitting] = useState(false);
+  const [quoteFormData, setQuoteFormData] = useState<{
+    pilgrimName: string;
+    contactPhone: string;
+    roomCategory: RoomCategory;
+    overrideProfitMad: string;
+    commercialDiscountMad: number;
+    arbitraryAdjustmentMad: number;
+    adjustmentReason: string;
+  }>({
+    pilgrimName: "",
+    contactPhone: "",
+    roomCategory: RoomCategory.DOUBLE,
+    overrideProfitMad: "",
+    commercialDiscountMad: 0,
+    arbitraryAdjustmentMad: 0,
+    adjustmentReason: "",
+  });
+
+  const fetchOfferQuotes = async () => {
+    try {
+      setQuotesLoading(true);
+      const res = await fetch(`/api/offers/${offerId}/quotes`);
+      if (res.ok) {
+        const data = await res.json();
+        setQuotes(data.quotes || []);
+      }
+    } catch (err) {
+      console.error("Failed to load offer quotes:", err);
+    } finally {
+      setQuotesLoading(false);
+    }
+  };
+
+  const handleCreateQuote = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setQuoteSubmitting(true);
+    try {
+      const res = await fetch(`/api/offers/${offerId}/quotes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pilgrimName: quoteFormData.pilgrimName.trim(),
+          contactPhone: quoteFormData.contactPhone.trim() || null,
+          roomCategory: quoteFormData.roomCategory,
+          overrideProfitMad: quoteFormData.overrideProfitMad !== "" ? Number(quoteFormData.overrideProfitMad) : null,
+          commercialDiscountMad: Number(quoteFormData.commercialDiscountMad) || 0,
+          arbitraryAdjustmentMad: Number(quoteFormData.arbitraryAdjustmentMad) || 0,
+          adjustmentReason: quoteFormData.adjustmentReason.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to create quote");
+
+      setIsQuoteModalOpen(false);
+      setQuoteFormData({
+        pilgrimName: "",
+        contactPhone: "",
+        roomCategory: RoomCategory.DOUBLE,
+        overrideProfitMad: "",
+        commercialDiscountMad: 0,
+        arbitraryAdjustmentMad: 0,
+        adjustmentReason: "",
+      });
+      fetchOfferQuotes();
+      router.push(`/quotes/${data.quote.id}`);
+    } catch (err: any) {
+      setNotification({
+        type: "error",
+        text: err.message || "Failed to create quote",
+      });
+    } finally {
+      setQuoteSubmitting(false);
+    }
+  };
+
+  const handleDuplicateQuote = async (qId: string) => {
+    try {
+      const res = await fetch(`/api/quotes/${qId}/duplicate`, { method: "POST" });
+      if (!res.ok) throw new Error("Failed to duplicate quote");
+      fetchOfferQuotes();
+      setNotification({
+        type: "success",
+        text: t("duplicateSuccess"),
+      });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Duplicate failed" });
+    }
+  };
+
+  const handleDeleteQuote = async (qId: string, name: string) => {
+    const confirmMsg =
+      language === "ar"
+        ? `هل تريد بالتأكيد حذف عرض المعتمر "${name}"؟`
+        : `Are you sure you want to delete quote for "${name}"?`;
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const res = await fetch(`/api/quotes/${qId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete quote");
+      fetchOfferQuotes();
+      setNotification({
+        type: "success",
+        text: t("quoteDeletedSuccess"),
+      });
+    } catch (err: any) {
+      setNotification({ type: "error", text: err.message || "Delete failed" });
+    }
+  };
+
   const fetchOfferDetails = async () => {
     try {
       setLoading(true);
@@ -292,6 +410,7 @@ export default function OfferPricingWorkspacePage() {
     if (offerId) {
       fetchOfferDetails();
       fetchCatalogItems();
+      fetchOfferQuotes();
     }
   }, [offerId]);
 
@@ -1506,6 +1625,172 @@ export default function OfferPricingWorkspacePage() {
       )}
 
       {/* ============================================================== */}
+      {/* SECTION 6: Individual Pilgrim Exceptions (Phase 5 Core)       */}
+      {/* ============================================================== */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 gap-2">
+          <div className="flex items-center gap-2">
+            <Users className="w-5 h-5 text-emerald-700" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-bold text-base text-slate-900">{t("individualExceptions")}</h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                  {quotes.length} {language === "ar" ? "معتمرين مخصصين" : "quotes"}
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                {t("individualExceptionsSubtitle")}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setIsQuoteModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" />
+            <span>{t("createCustomQuote")}</span>
+          </button>
+        </div>
+
+        {quotesLoading ? (
+          <div className="p-8 text-center text-slate-400 text-xs">
+            <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-600" />
+            <p>{t("loading")}</p>
+          </div>
+        ) : quotes.length === 0 ? (
+          <div className="p-8 text-center text-slate-400 text-xs border border-dashed border-slate-200 rounded-xl space-y-1">
+            <Users className="w-8 h-8 text-slate-300 mx-auto" />
+            <p className="font-semibold text-slate-700">{t("noQuotesYet")}</p>
+            <p className="text-[11px] text-slate-400">
+              اضغط على زر &quot;{t("createCustomQuote")}&quot; لتخصيص عرض لسعر معتمر فردي مع سيارة خاصة أو خصم مخصص.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs text-start">
+              <thead className="bg-slate-50 text-slate-500 font-semibold border-b border-slate-200 text-[11px]">
+                <tr>
+                  <th className="py-2.5 px-3 text-start">{t("pilgrimName")}</th>
+                  <th className="py-2.5 px-3 text-start">{t("roomCategory")}</th>
+                  <th className="py-2.5 px-3 text-end">{t("newActualCost")}</th>
+                  <th className="py-2.5 px-3 text-end">{t("customizedSellingPrice")}</th>
+                  <th className="py-2.5 px-3 text-end">{t("realizedProfit")}</th>
+                  <th className="py-2.5 px-3 text-center">{t("quoteStatus")}</th>
+                  <th className="py-2.5 px-3 text-center">{t("actions")}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {quotes.map((q) => {
+                  return (
+                    <tr
+                      key={q.id}
+                      className={`hover:bg-slate-50/70 transition-colors ${
+                        q.calculation.isDeficit ? "bg-rose-50/40" : ""
+                      }`}
+                    >
+                      <td className="py-3 px-3">
+                        <div className="font-bold text-slate-900">{q.pilgrimName}</div>
+                        {q.contactPhone && (
+                          <div className="text-[10px] text-slate-400 mt-0.5">{q.contactPhone}</div>
+                        )}
+                        {q.customizationsCount > 0 && (
+                          <span className="inline-block text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded mt-0.5 border border-emerald-100">
+                            {q.customizationsCount} استثناءات مخصصة
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-800">
+                          {q.roomCategory === "SINGLE" && "فردي (1)"}
+                          {q.roomCategory === "DOUBLE" && "ثنائي (2)"}
+                          {q.roomCategory === "TRIPLE" && "ثلاثي (3)"}
+                          {q.roomCategory === "QUAD" && "رباعي (4)"}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-3 text-end">
+                        <div className="font-bold text-slate-700">
+                          {q.calculation.newActualCostMad.toLocaleString()} {t("currencyMad")}
+                        </div>
+                        {q.calculation.supplierCostDeltaMad !== 0 && (
+                          <div
+                            className={`text-[10px] font-semibold ${
+                              q.calculation.supplierCostDeltaMad > 0 ? "text-rose-600" : "text-emerald-700"
+                            }`}
+                          >
+                            {q.calculation.supplierCostDeltaMad > 0 ? "+" : ""}
+                            {q.calculation.supplierCostDeltaMad.toLocaleString()} {t("currencyMad")}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3 text-end">
+                        <div className="font-black text-slate-900 text-sm">
+                          {q.calculation.finalSellingPriceMad.toLocaleString()} {t("currencyMad")}
+                        </div>
+                        {q.calculation.appliedDiscountMad > 0 && (
+                          <div className="text-[10px] text-amber-700 font-semibold">
+                            -{q.calculation.appliedDiscountMad.toLocaleString()} {t("currencyMad")} خصم
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3 text-end">
+                        <div
+                          className={`font-black text-xs ${
+                            q.calculation.realizedProfitMad >= 0 ? "text-emerald-700" : "text-rose-600"
+                          }`}
+                        >
+                          {q.calculation.realizedProfitMad.toLocaleString()} {t("currencyMad")}
+                        </div>
+                        {q.calculation.isDeficit && (
+                          <span className="text-[10px] font-bold text-rose-600 block">عجز مالي!</span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3 text-center">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                          {q.status === "CONFIRMED" ? t("finalizedStatus") : t("draftStatus")}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-3 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Link
+                            href={`/quotes/${q.id}`}
+                            className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title={t("viewQuote")}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <button
+                            onClick={() => handleDuplicateQuote(q.id)}
+                            className="p-1.5 text-slate-500 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+                            title={t("duplicate")}
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteQuote(q.id, q.pilgrimName)}
+                            className="p-1.5 text-slate-400 hover:text-rose-700 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+                            title={t("delete")}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* ============================================================== */}
       {/* MODAL 1: Add/Edit Hotel Stay                                    */}
       {/* ============================================================== */}
       {isStayModalOpen && (
@@ -1981,6 +2266,142 @@ export default function OfferPricingWorkspacePage() {
                   className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all disabled:opacity-50"
                 >
                   {trainSubmitting ? t("saving") : t("save")}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL 4: Create Individual Pilgrim Quote (Phase 5)              */}
+      {/* ============================================================== */}
+      {isQuoteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 bg-emerald-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-amber-300" />
+                <h3 className="font-bold text-base">{t("createCustomQuote")}</h3>
+              </div>
+              <button
+                onClick={() => setIsQuoteModalOpen(false)}
+                className="text-emerald-200 hover:text-white p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateQuote} className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">{t("pilgrimName")} *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="مثال: الحاج محمد القادري"
+                  value={quoteFormData.pilgrimName}
+                  onChange={(e) => setQuoteFormData({ ...quoteFormData, pilgrimName: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-semibold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">{t("contactPhone")}</label>
+                <input
+                  type="text"
+                  placeholder="+212 ..."
+                  value={quoteFormData.contactPhone}
+                  onChange={(e) => setQuoteFormData({ ...quoteFormData, contactPhone: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">{t("roomCategory")} *</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {(["DOUBLE", "SINGLE", "TRIPLE", "QUAD"] as RoomCategory[]).map((cat) => {
+                    const isSelected = quoteFormData.roomCategory === cat;
+                    const price = offer?.matrix?.[cat]?.finalSellingPriceMad;
+                    return (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => setQuoteFormData({ ...quoteFormData, roomCategory: cat })}
+                        className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                          isSelected
+                            ? "bg-emerald-50 border-emerald-500 text-emerald-900 font-bold shadow-xs"
+                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        <div className="text-xs">
+                          {cat === "DOUBLE" && "ثنائي (2)"}
+                          {cat === "SINGLE" && "فردي (1)"}
+                          {cat === "TRIPLE" && "ثلاثي (3)"}
+                          {cat === "QUAD" && "رباعي (4)"}
+                        </div>
+                        {price !== undefined && (
+                          <div className="text-[10px] text-slate-500 mt-0.5">
+                            {price.toLocaleString()} د.م.
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">تعديل هامش الربح (د.م.)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="50"
+                    placeholder={`الافتراضي: ${offer?.fixedProfitMad ?? 2000}`}
+                    value={quoteFormData.overrideProfitMad}
+                    onChange={(e) => setQuoteFormData({ ...quoteFormData, overrideProfitMad: e.target.value })}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-bold text-emerald-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">الخصم التجاري الممنوح (د.م.)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="50"
+                    value={quoteFormData.commercialDiscountMad}
+                    onChange={(e) => setQuoteFormData({ ...quoteFormData, commercialDiscountMad: parseFloat(e.target.value) || 0 })}
+                    className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600 font-bold text-amber-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">سبب الاستثناء / ملاحظات</label>
+                <input
+                  type="text"
+                  placeholder="ملاحظات حول طلبات المعتمر أو الترقية..."
+                  value={quoteFormData.adjustmentReason}
+                  onChange={(e) => setQuoteFormData({ ...quoteFormData, adjustmentReason: e.target.value })}
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-emerald-600"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsQuoteModalOpen(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50 cursor-pointer"
+                >
+                  {t("cancel")}
+                </button>
+                <button
+                  type="submit"
+                  disabled={quoteSubmitting}
+                  className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+                >
+                  {quoteSubmitting ? t("saving") : "إنشاء ومتابعة التخصيص ➔"}
                 </button>
               </div>
             </form>

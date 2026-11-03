@@ -64,12 +64,15 @@ enum QuoteStatus {
   DRAFT
   CONFIRMED
   CANCELLED
+  ARCHIVED
 }
 
 enum CustomizationType {
   ADD_PRIVATE_TRANSPORT
   REMOVE_SERVICE
   REPLACE_SERVICE
+  ADD_SERVICE
+  CUSTOM_EXPENSE
   ADDON
 }
 
@@ -289,6 +292,7 @@ model QuoteCustomizationItem {
   description         String
   supplierCostDeltaMad Decimal               @default(0.00) @db.Decimal(10, 2)
   sellingPriceDeltaMad Decimal               @default(0.00) @db.Decimal(10, 2)
+  details             Json?
   createdAt           DateTime               @default(now())
   updatedAt           DateTime               @updatedAt
 

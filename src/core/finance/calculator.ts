@@ -389,10 +389,11 @@ export function calculateBaselineOffer(
 /**
  * Calculates an individual customized quote derived from a baseline room breakdown.
  * Does NOT mutate the baseline offer.
- * Distinguishes:
- * - Real supplier cost deltas (e.g., private transport add-on, service swap)
- * - Profit overrides
- * - Commercial discounts
+ * Strictly implements Phase 5 Centralized Financial Engine:
+ * - New Actual Cost = Base Cost + Supplier Cost Additions - Real Supplier Cost Reductions
+ * - Selling Price = New Actual Cost + Configured Profit - Commercial Discount
+ * - Realized Profit = Selling Price - New Actual Cost
+ * - Negative margin deficit warning if Selling Price < New Actual Cost
  */
 export function calculateIndividualQuote(
   pilgrimName: string,
@@ -400,29 +401,83 @@ export function calculateIndividualQuote(
 ): IndividualPilgrimQuoteResult {
   const base = input.baselineBreakdown;
 
-  // Real supplier cost deltas
-  const privateTransportMad = new Decimal(input.privateTransportAddonsMad ?? 0);
-  const serviceDeltasMad = new Decimal(input.serviceCostDeltasMad ?? 0);
-  const arbitraryAdjustmentMad = new Decimal(input.arbitraryCostAdjustmentMad ?? 0);
+  let additions = new Decimal(0);
+  let reductions = new Decimal(0);
+  let extraCommercialDiscounts = new Decimal(0);
 
-  const totalSupplierDeltaMad = privateTransportMad
-    .plus(serviceDeltasMad)
-    .plus(arbitraryAdjustmentMad);
+  // Add individual legacy / flat inputs if present
+  if (input.privateTransportAddonsMad) {
+    const pt = new Decimal(input.privateTransportAddonsMad);
+    if (pt.isPositive()) additions = additions.plus(pt);
+    else reductions = reductions.plus(pt.abs());
+  }
 
-  const effectiveCostMad = base.totalActualCostMad.plus(totalSupplierDeltaMad);
+  if (input.serviceCostDeltasMad) {
+    const sd = new Decimal(input.serviceCostDeltasMad);
+    if (sd.isPositive()) additions = additions.plus(sd);
+    else reductions = reductions.plus(sd.abs());
+  }
+
+  if (input.arbitraryCostAdjustmentMad) {
+    const adj = new Decimal(input.arbitraryCostAdjustmentMad);
+    if (adj.isPositive()) additions = additions.plus(adj);
+    else reductions = reductions.plus(adj.abs());
+  }
+
+  const processedCustomizations: Array<{
+    type: string;
+    description: string;
+    supplierCostDeltaMad: Decimal;
+    sellingPriceDeltaMad: Decimal;
+    details?: any;
+  }> = [];
+
+  // Process structured customization items (7 Exception Types)
+  if (input.customizationItems && input.customizationItems.length > 0) {
+    for (const item of input.customizationItems) {
+      const delta = new Decimal(item.supplierCostDeltaMad || 0);
+      const sellingDelta = new Decimal(item.sellingPriceDeltaMad || 0);
+
+      if (delta.isPositive()) {
+        additions = additions.plus(delta);
+      } else if (delta.isNegative()) {
+        reductions = reductions.plus(delta.abs());
+      }
+
+      if (item.details?.commercialDiscountMad) {
+        extraCommercialDiscounts = extraCommercialDiscounts.plus(
+          new Decimal(item.details.commercialDiscountMad)
+        );
+      }
+
+      processedCustomizations.push({
+        type: item.type,
+        description: item.description,
+        supplierCostDeltaMad: roundCurrency(delta),
+        sellingPriceDeltaMad: roundCurrency(sellingDelta),
+        details: item.details,
+      });
+    }
+  }
+
+  const netSupplierDeltaMad = additions.minus(reductions);
+  const effectiveCostMad = base.totalActualCostMad.plus(netSupplierDeltaMad);
 
   // Profit determination: explicit override or inherited baseline fixed profit
-  const effectiveBaseProfitMad =
-    input.overrideProfitMad !== undefined && input.overrideProfitMad !== null
-      ? new Decimal(input.overrideProfitMad)
-      : base.configuredProfitMad;
+  const isProfitOverridden =
+    input.overrideProfitMad !== undefined && input.overrideProfitMad !== null;
+  const effectiveBaseProfitMad = isProfitOverridden
+    ? new Decimal(input.overrideProfitMad!)
+    : base.configuredProfitMad;
 
-  // Commercial discount
-  const commercialDiscount = new Decimal(input.commercialDiscountMad ?? 0);
+  // Commercial discount (quote-level + item-level)
+  const totalCommercialDiscount = new Decimal(input.commercialDiscountMad ?? 0).plus(
+    extraCommercialDiscounts
+  );
 
-  // Final selling price = Effective Cost + Base Profit - Discount
+  // Final selling price = Effective Cost + Configured Profit - Discount
   const sellingPriceBeforeDiscount = effectiveCostMad.plus(effectiveBaseProfitMad);
-  const finalSellingPrice = sellingPriceBeforeDiscount.minus(commercialDiscount);
+  const finalSellingPrice = sellingPriceBeforeDiscount.minus(totalCommercialDiscount);
 
   // Net realized profit = Final Selling Price - Effective Cost
   const netProfit = finalSellingPrice.minus(effectiveCostMad);
@@ -431,12 +486,16 @@ export function calculateIndividualQuote(
     pilgrimName,
     roomCategory: base.roomCategory,
     supplierCostMad: roundCurrency(base.totalActualCostMad),
-    supplierCostDeltaMad: roundCurrency(totalSupplierDeltaMad),
+    supplierCostDeltaMad: roundCurrency(netSupplierDeltaMad),
+    supplierCostAdditionsMad: roundCurrency(additions),
+    supplierCostReductionsMad: roundCurrency(reductions),
     totalEffectiveCostMad: roundCurrency(effectiveCostMad),
     baseProfitMad: roundCurrency(effectiveBaseProfitMad),
-    appliedDiscountMad: roundCurrency(commercialDiscount),
+    isProfitOverridden,
+    appliedDiscountMad: roundCurrency(totalCommercialDiscount),
     netProfitMad: roundCurrency(netProfit),
     finalSellingPriceMad: roundCurrency(finalSellingPrice),
     isDeficit: finalSellingPrice.lessThan(effectiveCostMad),
+    customizations: processedCustomizations,
   };
 }

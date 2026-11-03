@@ -159,6 +159,33 @@ export interface OfferCalculationResult {
   roomBreakdowns: Record<RoomCategoryType, RoomCostBreakdown>;
 }
 
+export interface QuoteCustomizationDetail {
+  routeId?: string;
+  routeName?: string;
+  vehicleType?: "SEDAN" | "GMC" | "STARIA" | "HIACE" | "COASTER" | "BUS";
+  vehicleCostSar?: number;
+  vehicleCostMad?: number;
+  passengersSharing?: number;
+  perPersonCostSar?: number;
+  perPersonCostMad?: number;
+  originalServiceName?: string;
+  replacementServiceName?: string;
+  isRecoverable?: boolean;
+  supplierCostAdditionMad?: number;
+  supplierCostReductionMad?: number;
+  commercialDiscountMad?: number;
+  notes?: string;
+}
+
+export interface QuoteCustomizationItemInput {
+  id?: string;
+  type: "ADD_PRIVATE_TRANSPORT" | "REMOVE_SERVICE" | "REPLACE_SERVICE" | "ADD_SERVICE" | "CUSTOM_EXPENSE" | "ADDON";
+  description: string;
+  supplierCostDeltaMad: Decimal | number | string;
+  sellingPriceDeltaMad?: Decimal | number | string;
+  details?: QuoteCustomizationDetail | null;
+}
+
 export interface IndividualExceptionInput {
   baselineBreakdown: RoomCostBreakdown;
   overrideProfitMad?: Decimal | number | string | null;
@@ -167,6 +194,7 @@ export interface IndividualExceptionInput {
   arbitraryAdjustmentReason?: string;
   privateTransportAddonsMad?: Decimal | number | string;
   serviceCostDeltasMad?: Decimal | number | string;
+  customizationItems?: QuoteCustomizationItemInput[];
 }
 
 export interface IndividualPilgrimQuoteResult {
@@ -174,12 +202,22 @@ export interface IndividualPilgrimQuoteResult {
   roomCategory: RoomCategoryType;
   supplierCostMad: Decimal;
   supplierCostDeltaMad: Decimal;
+  supplierCostAdditionsMad: Decimal;
+  supplierCostReductionsMad: Decimal;
   totalEffectiveCostMad: Decimal;
   baseProfitMad: Decimal;
+  isProfitOverridden: boolean;
   appliedDiscountMad: Decimal;
   netProfitMad: Decimal;
   finalSellingPriceMad: Decimal;
   isDeficit: boolean;
+  customizations?: Array<{
+    type: string;
+    description: string;
+    supplierCostDeltaMad: Decimal;
+    sellingPriceDeltaMad: Decimal;
+    details?: QuoteCustomizationDetail | null;
+  }>;
 }
 
 /**
