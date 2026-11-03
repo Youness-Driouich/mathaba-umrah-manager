@@ -60,6 +60,32 @@ export interface FlightCostInput {
   groupPilgrimCount?: number;
 }
 
+export interface AdditionalTransportInput {
+  id?: string;
+  routeName: string;
+  vehicleType: "SEDAN" | "GMC" | "STARIA" | "HIACE" | "COASTER" | "BUS";
+  vehicleCount: number;
+  capacityPerVehicle: number;
+  allocatedPilgrimsCount: number;
+  supplierReferencePrice: Decimal | number | string;
+  actualPriceSar: Decimal | number | string;
+  isPriceOverridden?: boolean;
+  isIncludedInPackage: boolean;
+  notes?: string | null;
+}
+
+export interface TrainExpenseInput {
+  id?: string;
+  departureStation: string;
+  arrivalStation: string;
+  travelDate?: Date | string | null;
+  ticketClass: "ECONOMY" | "BUSINESS";
+  ticketPriceSar: Decimal | number | string;
+  passengerCount: number;
+  isIncluded: boolean;
+  notes?: string | null;
+}
+
 export interface TransportationCostInput {
   groupBusTotalSar: Decimal | number | string;
   groupPilgrimCount: number;
@@ -76,6 +102,8 @@ export interface BaselineOfferCalculationInput {
   hotelStays: HotelStayInput[];
   flight: FlightCostInput;
   transportation: TransportationCostInput;
+  additionalTransports?: AdditionalTransportInput[];
+  trainExpenses?: TrainExpenseInput[];
   visaCostSar: Decimal | number | string;
   additionalServices?: ServiceCostInput[];
   fixedProfitMadPerPilgrim: Decimal | number | string;
@@ -87,6 +115,9 @@ export interface RoomCostBreakdown {
   hotelCostMad: Decimal;
   flightCostMad: Decimal;
   transportCostMad: Decimal;
+  groupBusCostMad: Decimal;
+  additionalTransportCostMad: Decimal;
+  trainCostMad: Decimal;
   visaCostMad: Decimal;
   servicesCostMad: Decimal;
   totalActualCostMad: Decimal;
@@ -105,9 +136,25 @@ export interface OfferCalculationResult {
     flightCostMad: Decimal;
     groupBusCostSar: Decimal;
     groupBusCostMad: Decimal;
+    additionalTransportCostSar: Decimal;
+    additionalTransportCostMad: Decimal;
+    trainCostSar: Decimal;
+    trainCostMad: Decimal;
     visaCostSar: Decimal;
     visaCostMad: Decimal;
     servicesCostMad: Decimal;
+  };
+  additionalTransportsSummary?: {
+    totalCostSar: Decimal;
+    totalCostMad: Decimal;
+    includedInPackageCostSar: Decimal;
+    includedInPackageCostMad: Decimal;
+  };
+  trainExpensesSummary?: {
+    totalCostSar: Decimal;
+    totalCostMad: Decimal;
+    includedInPackageCostSar: Decimal;
+    includedInPackageCostMad: Decimal;
   };
   roomBreakdowns: Record<RoomCategoryType, RoomCostBreakdown>;
 }

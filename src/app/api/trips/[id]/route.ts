@@ -19,6 +19,7 @@ const updateTripSchema = z.object({
   eurToMadRate: z.number().gt(0).optional(),
   groupBusCostSar: z.number().min(0).optional(),
   groupBusCount: z.number().int().min(1).optional(),
+  visaCostSar: z.number().min(0).optional(),
   status: z.nativeEnum(TripStatus).optional(),
   notes: z.string().optional().nullable(),
 });
@@ -56,6 +57,7 @@ export async function GET(
         sarToMadRate: Number(trip.sarToMadRate),
         eurToMadRate: Number(trip.eurToMadRate),
         groupBusCostSar: Number(trip.groupBusCostSar),
+        visaCostSar: Number(trip.visaCostSar),
         offers: trip.offers.map((o) => ({
           ...o,
           fixedProfitMad: Number(o.fixedProfitMad),
@@ -106,6 +108,7 @@ export async function PUT(
         ...(data.eurToMadRate !== undefined ? { eurToMadRate: data.eurToMadRate } : {}),
         ...(data.groupBusCostSar !== undefined ? { groupBusCostSar: data.groupBusCostSar } : {}),
         ...(data.groupBusCount !== undefined ? { groupBusCount: data.groupBusCount } : {}),
+        ...(data.visaCostSar !== undefined ? { visaCostSar: data.visaCostSar } : {}),
         ...(data.status ? { status: data.status } : {}),
         ...(data.notes !== undefined ? { notes: data.notes } : {}),
       },
@@ -120,6 +123,7 @@ export async function PUT(
         sarToMadRate: Number(updated.sarToMadRate),
         eurToMadRate: Number(updated.eurToMadRate),
         groupBusCostSar: Number(updated.groupBusCostSar),
+        visaCostSar: Number(updated.visaCostSar),
       },
     });
   } catch (error: unknown) {

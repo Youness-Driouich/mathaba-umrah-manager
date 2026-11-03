@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 import {
+  AdditionalTransportInput,
   BaselineOfferCalculationInput,
   CurrencyCode,
   ExchangeRates,
@@ -11,8 +12,41 @@ import {
   RoomCategoryType,
   RoomCostBreakdown,
   ROOM_OCCUPANCIES,
+  TrainExpenseInput,
 } from "./types";
 import { convertToMad, roundCurrency } from "./currency";
+
+/**
+ * Standard vehicle passenger capacities as confirmed by official supplier.
+ */
+export const VEHICLE_CAPACITIES: Record<string, number> = {
+  SEDAN: 4,
+  GMC: 7,
+  STARIA: 7,
+  HIACE: 10,
+  COASTER: 21,
+  BUS: 47,
+};
+
+/**
+ * Validates that passenger count does not exceed vehicle capacity.
+ */
+export function validateVehicleCapacity(
+  vehicleType: string,
+  passengerCount: number,
+  vehicleCount: number = 1
+): { isValid: boolean; maxCapacity: number; message?: string } {
+  const capacityPerVehicle = VEHICLE_CAPACITIES[vehicleType] || 4;
+  const maxCapacity = capacityPerVehicle * Math.max(1, vehicleCount);
+  const isValid = passengerCount <= maxCapacity && passengerCount > 0;
+  return {
+    isValid,
+    maxCapacity,
+    message: isValid
+      ? undefined
+      : `Passenger count (${passengerCount}) exceeds the maximum vehicle capacity (${maxCapacity} for ${vehicleCount} ${vehicleType}).`,
+  };
+}
 
 /**
  * Calculates number of nights between check-in and check-out dates,
@@ -199,11 +233,66 @@ export function calculateBaselineOffer(
   );
   const groupBusCostMad = convertToMad(groupBusCostSar, "SAR", exchangeRates);
 
-  // 4. Visa cost per pilgrim in SAR & MAD
+  // 4. Additional Transportation included in the baseline offer package
+  let additionalTransportCostSar = new Decimal(0);
+  let additionalTransportCostMad = new Decimal(0);
+  let totalAddTransportsSar = new Decimal(0);
+  let includedAddTransportsSar = new Decimal(0);
+
+  if (input.additionalTransports && input.additionalTransports.length > 0) {
+    for (const t of input.additionalTransports) {
+      const actualPrice = new Decimal(t.actualPriceSar);
+      const vehicleCount = t.vehicleCount > 0 ? t.vehicleCount : 1;
+      const totalItemCostSar = actualPrice.times(vehicleCount);
+      totalAddTransportsSar = totalAddTransportsSar.plus(totalItemCostSar);
+
+      if (t.isIncludedInPackage) {
+        includedAddTransportsSar = includedAddTransportsSar.plus(totalItemCostSar);
+        const pilgrimCount =
+          t.allocatedPilgrimsCount > 0
+            ? t.allocatedPilgrimsCount
+            : input.transportation.groupPilgrimCount;
+        const perPilgrimSar = totalItemCostSar.dividedBy(pilgrimCount);
+        const perPilgrimMad = convertToMad(perPilgrimSar, "SAR", exchangeRates);
+        additionalTransportCostSar = additionalTransportCostSar.plus(perPilgrimSar);
+        additionalTransportCostMad = additionalTransportCostMad.plus(perPilgrimMad);
+      }
+    }
+  }
+
+  // 5. Haramain High-Speed Train included in the baseline offer package
+  let trainCostSar = new Decimal(0);
+  let trainCostMad = new Decimal(0);
+  let totalTrainSar = new Decimal(0);
+  let includedTrainSar = new Decimal(0);
+
+  if (input.trainExpenses && input.trainExpenses.length > 0) {
+    for (const tr of input.trainExpenses) {
+      const ticketPrice = new Decimal(tr.ticketPriceSar);
+      const passCount = tr.passengerCount > 0 ? tr.passengerCount : 1;
+      const totalItemCostSar = ticketPrice.times(passCount);
+      totalTrainSar = totalTrainSar.plus(totalItemCostSar);
+
+      if (tr.isIncluded) {
+        includedTrainSar = includedTrainSar.plus(totalItemCostSar);
+        // For a train journey included for every pilgrim in the group, per person is the ticket price
+        const groupCount =
+          input.transportation.groupPilgrimCount > 0
+            ? input.transportation.groupPilgrimCount
+            : passCount;
+        const perPilgrimSar = totalItemCostSar.dividedBy(groupCount);
+        const perPilgrimMad = convertToMad(perPilgrimSar, "SAR", exchangeRates);
+        trainCostSar = trainCostSar.plus(perPilgrimSar);
+        trainCostMad = trainCostMad.plus(perPilgrimMad);
+      }
+    }
+  }
+
+  // 6. Visa cost per pilgrim in SAR & MAD
   const visaCostSar = new Decimal(input.visaCostSar);
   const visaCostMad = convertToMad(visaCostSar, "SAR", exchangeRates);
 
-  // 5. Additional shared services per pilgrim in MAD
+  // 7. Additional shared services per pilgrim in MAD
   let totalServicesMad = new Decimal(0);
   if (input.additionalServices && input.additionalServices.length > 0) {
     for (const service of input.additionalServices) {
@@ -220,10 +309,13 @@ export function calculateBaselineOffer(
     }
   }
 
+  // Combined transport per pilgrim (group bus + additional included transport)
+  const combinedTransportCostMad = groupBusCostMad.plus(additionalTransportCostMad);
+
   // Fixed profit in MAD (same across room categories for the baseline offer)
   const fixedProfitMad = new Decimal(input.fixedProfitMadPerPilgrim);
 
-  // 6. Build room category breakdowns
+  // 8. Build room category breakdowns
   const categories: RoomCategoryType[] = ["SINGLE", "DOUBLE", "TRIPLE", "QUAD"];
   const roomBreakdowns = {} as Record<RoomCategoryType, RoomCostBreakdown>;
 
@@ -232,6 +324,8 @@ export function calculateBaselineOffer(
     const totalActualCost = hotelCost
       .plus(flightCostMad)
       .plus(groupBusCostMad)
+      .plus(additionalTransportCostMad)
+      .plus(trainCostMad)
       .plus(visaCostMad)
       .plus(totalServicesMad);
 
@@ -245,7 +339,10 @@ export function calculateBaselineOffer(
       occupancy: ROOM_OCCUPANCIES[cat],
       hotelCostMad: roundCurrency(hotelCost),
       flightCostMad: roundCurrency(flightCostMad),
-      transportCostMad: roundCurrency(groupBusCostMad),
+      transportCostMad: roundCurrency(combinedTransportCostMad),
+      groupBusCostMad: roundCurrency(groupBusCostMad),
+      additionalTransportCostMad: roundCurrency(additionalTransportCostMad),
+      trainCostMad: roundCurrency(trainCostMad),
       visaCostMad: roundCurrency(visaCostMad),
       servicesCostMad: roundCurrency(totalServicesMad),
       totalActualCostMad: roundCurrency(totalActualCost),
@@ -265,9 +362,25 @@ export function calculateBaselineOffer(
       flightCostMad: roundCurrency(flightCostMad),
       groupBusCostSar: roundCurrency(groupBusCostSar),
       groupBusCostMad: roundCurrency(groupBusCostMad),
+      additionalTransportCostSar: roundCurrency(additionalTransportCostSar),
+      additionalTransportCostMad: roundCurrency(additionalTransportCostMad),
+      trainCostSar: roundCurrency(trainCostSar),
+      trainCostMad: roundCurrency(trainCostMad),
       visaCostSar: roundCurrency(visaCostSar),
       visaCostMad: roundCurrency(visaCostMad),
       servicesCostMad: roundCurrency(totalServicesMad),
+    },
+    additionalTransportsSummary: {
+      totalCostSar: roundCurrency(totalAddTransportsSar),
+      totalCostMad: roundCurrency(convertToMad(totalAddTransportsSar, "SAR", exchangeRates)),
+      includedInPackageCostSar: roundCurrency(includedAddTransportsSar),
+      includedInPackageCostMad: roundCurrency(convertToMad(includedAddTransportsSar, "SAR", exchangeRates)),
+    },
+    trainExpensesSummary: {
+      totalCostSar: roundCurrency(totalTrainSar),
+      totalCostMad: roundCurrency(convertToMad(totalTrainSar, "SAR", exchangeRates)),
+      includedInPackageCostSar: roundCurrency(includedTrainSar),
+      includedInPackageCostMad: roundCurrency(convertToMad(includedTrainSar, "SAR", exchangeRates)),
     },
     roomBreakdowns,
   };

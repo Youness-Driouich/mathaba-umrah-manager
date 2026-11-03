@@ -29,6 +29,7 @@ const createTripSchema = z.object({
   eurToMadRate: z.number().gt(0, "EUR to MAD rate must be greater than zero").optional(),
   groupBusCostSar: z.number().min(0).default(0),
   groupBusCount: z.number().int().min(1).default(1),
+  visaCostSar: z.number().min(0).optional(),
   status: z.nativeEnum(TripStatus).default(TripStatus.DRAFT),
   notes: z.string().optional().nullable(),
 });
@@ -69,6 +70,7 @@ export async function GET(req: NextRequest) {
         sarToMadRate: Number(t.sarToMadRate),
         eurToMadRate: Number(t.eurToMadRate),
         groupBusCostSar: Number(t.groupBusCostSar),
+        visaCostSar: Number(t.visaCostSar),
         offersCount: t._count.offers,
       })),
     });
@@ -98,13 +100,14 @@ export async function POST(req: NextRequest) {
 
     const data = parsed.data;
 
-    // Fetch default global settings if rates are not provided
+    // Fetch default global settings if rates or visa fee are not provided
     const globalSettings = await prisma.globalSetting.findUnique({
       where: { id: "default" },
     });
 
     const sarRate = data.sarToMadRate ?? Number(globalSettings?.sarToMadRate ?? 2.70);
     const eurRate = data.eurToMadRate ?? Number(globalSettings?.eurToMadRate ?? 10.85);
+    const visaFee = data.visaCostSar ?? Number(globalSettings?.defaultVisaCostSar ?? 525.00);
 
     const slug = generateSlug(data.name);
 
@@ -123,6 +126,7 @@ export async function POST(req: NextRequest) {
         eurToMadRate: eurRate,
         groupBusCostSar: data.groupBusCostSar,
         groupBusCount: data.groupBusCount,
+        visaCostSar: visaFee,
         status: data.status,
         notes: data.notes || null,
       },
@@ -138,6 +142,7 @@ export async function POST(req: NextRequest) {
           sarToMadRate: Number(trip.sarToMadRate),
           eurToMadRate: Number(trip.eurToMadRate),
           groupBusCostSar: Number(trip.groupBusCostSar),
+          visaCostSar: Number(trip.visaCostSar),
           offersCount: 0,
         },
       },

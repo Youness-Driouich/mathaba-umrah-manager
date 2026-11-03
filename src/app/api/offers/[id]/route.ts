@@ -29,6 +29,12 @@ export async function GET(
         hotelStays: {
           orderBy: { checkInDate: "asc" },
         },
+        additionalTransports: {
+          orderBy: { createdAt: "asc" },
+        },
+        trainExpenses: {
+          orderBy: { createdAt: "asc" },
+        },
         services: true,
       },
     });
@@ -39,11 +45,8 @@ export async function GET(
 
     const { trip } = offer;
 
-    // Global visa fee
-    const globalSettings = await prisma.globalSetting.findUnique({
-      where: { id: "default" },
-    });
-    const visaCostSar = Number(globalSettings?.defaultVisaCostSar ?? 525);
+    // Historical visa fee snapshot from trip
+    const visaCostSar = Number(trip.visaCostSar ?? 525);
 
     // Compute live matrix
     const hotelInputs: HotelStayInput[] = offer.hotelStays.map((stay) => ({
@@ -56,6 +59,32 @@ export async function GET(
       singleDoubleNightlyRateSar: Number(stay.singleDoubleRateSar),
       tripleNightlyRateSar: Number(stay.tripleRateSar),
       quadNightlyRateSar: Number(stay.quadRateSar),
+    }));
+
+    const additionalTransportsInputs = offer.additionalTransports.map((t) => ({
+      id: t.id,
+      routeName: t.routeName,
+      vehicleType: t.vehicleType,
+      vehicleCount: t.vehicleCount,
+      capacityPerVehicle: t.capacityPerVehicle,
+      allocatedPilgrimsCount: t.allocatedPilgrimsCount,
+      supplierReferencePrice: Number(t.supplierReferencePrice),
+      actualPriceSar: Number(t.actualPriceSar),
+      isPriceOverridden: t.isPriceOverridden,
+      isIncludedInPackage: t.isIncludedInPackage,
+      notes: t.notes,
+    }));
+
+    const trainExpenseInputs = offer.trainExpenses.map((tr) => ({
+      id: tr.id,
+      departureStation: tr.departureStation,
+      arrivalStation: tr.arrivalStation,
+      travelDate: tr.travelDate,
+      ticketClass: tr.ticketClass,
+      ticketPriceSar: Number(tr.ticketPriceSar),
+      passengerCount: tr.passengerCount,
+      isIncluded: tr.isIncluded,
+      notes: tr.notes,
     }));
 
     const calculation = calculateBaselineOffer({
@@ -75,6 +104,8 @@ export async function GET(
         groupBusTotalSar: Number(trip.groupBusCostSar),
         groupPilgrimCount: trip.expectedPilgrims,
       },
+      additionalTransports: additionalTransportsInputs,
+      trainExpenses: trainExpenseInputs,
       visaCostSar,
       fixedProfitMadPerPilgrim: Number(offer.fixedProfitMad),
     });
@@ -95,6 +126,15 @@ export async function GET(
           tripleRateSar: Number(s.tripleRateSar),
           quadRateSar: Number(s.quadRateSar),
         })),
+        additionalTransports: offer.additionalTransports.map((t) => ({
+          ...t,
+          supplierReferencePrice: Number(t.supplierReferencePrice),
+          actualPriceSar: Number(t.actualPriceSar),
+        })),
+        trainExpenses: offer.trainExpenses.map((tr) => ({
+          ...tr,
+          ticketPriceSar: Number(tr.ticketPriceSar),
+        })),
         trip: {
           id: trip.id,
           name: trip.name,
@@ -111,6 +151,8 @@ export async function GET(
         },
         matrix: calculation.roomBreakdowns,
         sharedCosts: calculation.sharedCostsPerPilgrim,
+        additionalTransportsSummary: calculation.additionalTransportsSummary,
+        trainExpensesSummary: calculation.trainExpensesSummary,
       },
     });
   } catch (error) {

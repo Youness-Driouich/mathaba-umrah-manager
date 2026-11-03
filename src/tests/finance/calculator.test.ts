@@ -7,6 +7,8 @@ import {
   calculateFlightCostPerPilgrim,
   calculateBaselineOffer,
   calculateIndividualQuote,
+  validateVehicleCapacity,
+  VEHICLE_CAPACITIES,
 } from "../../core/finance/calculator";
 import {
   convertToMad,
@@ -124,6 +126,9 @@ describe("Mathaba Umrah Manager — Financial Calculation Engine", () => {
         hotelCostMad: new Decimal(10000),
         flightCostMad: new Decimal(8000),
         transportCostMad: new Decimal(500),
+        groupBusCostMad: new Decimal(500),
+        additionalTransportCostMad: new Decimal(0),
+        trainCostMad: new Decimal(0),
         visaCostMad: new Decimal(1417.5),
         servicesCostMad: new Decimal(200),
         totalActualCostMad: new Decimal(20117.5),
@@ -154,6 +159,9 @@ describe("Mathaba Umrah Manager — Financial Calculation Engine", () => {
         hotelCostMad: new Decimal(10000),
         flightCostMad: new Decimal(5000),
         transportCostMad: new Decimal(500),
+        groupBusCostMad: new Decimal(500),
+        additionalTransportCostMad: new Decimal(0),
+        trainCostMad: new Decimal(0),
         visaCostMad: new Decimal(1400),
         servicesCostMad: new Decimal(0),
         totalActualCostMad: new Decimal(16900),
@@ -298,6 +306,174 @@ describe("Mathaba Umrah Manager — Financial Calculation Engine", () => {
       expect(rawJson).not.toContain("supplier");
       expect(rawJson).not.toContain("discount");
       expect(rawJson).not.toContain("cost");
+    });
+  });
+
+  // --- PHASE 4 TESTS: Transportation & Haramain Train Integration ---
+  describe("Phase 4 — Transportation, Vehicle Capacities & Haramain Train", () => {
+    it("Step 1: Standard group bus is counted exactly once: 4,400 SAR / 40 = 110 SAR per pilgrim", () => {
+      const busAllocation = allocateTransportation(4400, 40);
+      expect(busAllocation.toNumber()).toBe(110);
+
+      const offer = calculateBaselineOffer({
+        offerName: "Test Standard Group Bus",
+        exchangeRates: standardRates,
+        hotelStays: [],
+        flight: { amount: 0, currency: "MAD", allocation: "PER_PERSON" },
+        transportation: { groupBusTotalSar: 4400, groupPilgrimCount: 40 },
+        visaCostSar: 0,
+        fixedProfitMadPerPilgrim: 0,
+      });
+
+      // 110 SAR * 2.70 = 297 MAD
+      expect(offer.sharedCostsPerPilgrim.groupBusCostSar.toNumber()).toBe(110);
+      expect(offer.sharedCostsPerPilgrim.groupBusCostMad.toNumber()).toBe(297);
+      expect(offer.roomBreakdowns.DOUBLE.groupBusCostMad.toNumber()).toBe(297);
+      expect(offer.roomBreakdowns.DOUBLE.totalActualCostMad.toNumber()).toBe(297);
+    });
+
+    it("Step 2: Additional transportation: GMC costing 600 SAR for 3 passengers gives 200 SAR per passenger", () => {
+      const gmcAlloc = allocateTransportation(600, 3);
+      expect(gmcAlloc.toNumber()).toBe(200);
+
+      const offer = calculateBaselineOffer({
+        offerName: "Test Additional GMC",
+        exchangeRates: standardRates,
+        hotelStays: [],
+        flight: { amount: 0, currency: "MAD", allocation: "PER_PERSON" },
+        transportation: { groupBusTotalSar: 4400, groupPilgrimCount: 40 },
+        additionalTransports: [
+          {
+            routeName: "Jeddah Airport - Makkah Hotel",
+            vehicleType: "GMC",
+            vehicleCount: 1,
+            capacityPerVehicle: 7,
+            allocatedPilgrimsCount: 3,
+            supplierReferencePrice: 600,
+            actualPriceSar: 600,
+            isIncludedInPackage: true,
+          },
+        ],
+        visaCostSar: 0,
+        fixedProfitMadPerPilgrim: 0,
+      });
+
+      // GMC: 600 / 3 = 200 SAR per pilgrim = 540 MAD
+      expect(offer.sharedCostsPerPilgrim.additionalTransportCostSar.toNumber()).toBe(200);
+      expect(offer.sharedCostsPerPilgrim.additionalTransportCostMad.toNumber()).toBe(540);
+
+      // Private transport does NOT subtract group bus (110 SAR = 297 MAD).
+      // Total transport cost = 297 MAD (bus) + 540 MAD (GMC) = 837 MAD
+      expect(offer.roomBreakdowns.DOUBLE.groupBusCostMad.toNumber()).toBe(297);
+      expect(offer.roomBreakdowns.DOUBLE.additionalTransportCostMad.toNumber()).toBe(540);
+      expect(offer.roomBreakdowns.DOUBLE.transportCostMad.toNumber()).toBe(837);
+      expect(offer.roomBreakdowns.DOUBLE.totalActualCostMad.toNumber()).toBe(837);
+    });
+
+    it("Step 3: Haramain Train: 250 SAR ticket for 40 passengers gives 10,000 SAR total and 250 SAR per pilgrim", () => {
+      const offer = calculateBaselineOffer({
+        offerName: "Test Haramain Train",
+        exchangeRates: standardRates,
+        hotelStays: [],
+        flight: { amount: 0, currency: "MAD", allocation: "PER_PERSON" },
+        transportation: { groupBusTotalSar: 4400, groupPilgrimCount: 40 },
+        trainExpenses: [
+          {
+            departureStation: "Makkah",
+            arrivalStation: "Madinah",
+            ticketClass: "ECONOMY",
+            ticketPriceSar: 250,
+            passengerCount: 40,
+            isIncluded: true,
+          },
+        ],
+        visaCostSar: 0,
+        fixedProfitMadPerPilgrim: 0,
+      });
+
+      // Total train budget = 250 * 40 = 10,000 SAR
+      expect(offer.trainExpensesSummary?.totalCostSar.toNumber()).toBe(10000);
+      expect(offer.sharedCostsPerPilgrim.trainCostSar.toNumber()).toBe(250);
+      // 250 SAR * 2.70 = 675 MAD
+      expect(offer.sharedCostsPerPilgrim.trainCostMad.toNumber()).toBe(675);
+      expect(offer.roomBreakdowns.DOUBLE.trainCostMad.toNumber()).toBe(675);
+    });
+
+    it("Step 4: Optional services excluded from standard package do not affect baseline selling price", () => {
+      const baseOfferWithoutOptional = calculateBaselineOffer({
+        offerName: "Baseline Offer",
+        exchangeRates: standardRates,
+        hotelStays: [],
+        flight: { amount: 0, currency: "MAD", allocation: "PER_PERSON" },
+        transportation: { groupBusTotalSar: 4400, groupPilgrimCount: 40 },
+        visaCostSar: 525,
+        fixedProfitMadPerPilgrim: 2000,
+      });
+
+      const offerWithOptionalServices = calculateBaselineOffer({
+        offerName: "Offer with Optional Services",
+        exchangeRates: standardRates,
+        hotelStays: [],
+        flight: { amount: 0, currency: "MAD", allocation: "PER_PERSON" },
+        transportation: { groupBusTotalSar: 4400, groupPilgrimCount: 40 },
+        additionalTransports: [
+          {
+            routeName: "VIP Taif Ziyarat Excursion",
+            vehicleType: "GMC",
+            vehicleCount: 2,
+            capacityPerVehicle: 7,
+            allocatedPilgrimsCount: 14,
+            supplierReferencePrice: 1300,
+            actualPriceSar: 1300,
+            isIncludedInPackage: false, // OPTIONAL
+          },
+        ],
+        trainExpenses: [
+          {
+            departureStation: "Madinah",
+            arrivalStation: "Jeddah Airport",
+            ticketClass: "BUSINESS",
+            ticketPriceSar: 350,
+            passengerCount: 10,
+            isIncluded: false, // OPTIONAL
+          },
+        ],
+        visaCostSar: 525,
+        fixedProfitMadPerPilgrim: 2000,
+      });
+
+      // The baseline selling price MUST remain identical because optional services are not included in the standard package
+      expect(offerWithOptionalServices.roomBreakdowns.DOUBLE.finalSellingPriceMad.toNumber()).toBe(
+        baseOfferWithoutOptional.roomBreakdowns.DOUBLE.finalSellingPriceMad.toNumber()
+      );
+      expect(offerWithOptionalServices.roomBreakdowns.DOUBLE.additionalTransportCostMad.toNumber()).toBe(0);
+      expect(offerWithOptionalServices.roomBreakdowns.DOUBLE.trainCostMad.toNumber()).toBe(0);
+
+      // But the summary reflects the existence of optional items
+      expect(offerWithOptionalServices.additionalTransportsSummary?.totalCostSar.toNumber()).toBe(2600);
+      expect(offerWithOptionalServices.additionalTransportsSummary?.includedInPackageCostSar.toNumber()).toBe(0);
+      expect(offerWithOptionalServices.trainExpensesSummary?.totalCostSar.toNumber()).toBe(3500);
+      expect(offerWithOptionalServices.trainExpensesSummary?.includedInPackageCostSar.toNumber()).toBe(0);
+    });
+
+    it("Step 5: Vehicle capacity validations adhere to official supplier passenger limits", () => {
+      expect(VEHICLE_CAPACITIES.SEDAN).toBe(4);
+      expect(VEHICLE_CAPACITIES.GMC).toBe(7);
+      expect(VEHICLE_CAPACITIES.STARIA).toBe(7);
+      expect(VEHICLE_CAPACITIES.HIACE).toBe(10);
+      expect(VEHICLE_CAPACITIES.COASTER).toBe(21);
+      expect(VEHICLE_CAPACITIES.BUS).toBe(47);
+
+      // Valid: 4 pax in 1 Sedan
+      expect(validateVehicleCapacity("SEDAN", 4, 1).isValid).toBe(true);
+      // Invalid: 5 pax in 1 Sedan
+      expect(validateVehicleCapacity("SEDAN", 5, 1).isValid).toBe(false);
+      // Valid: 8 pax in 2 Sedans
+      expect(validateVehicleCapacity("SEDAN", 8, 2).isValid).toBe(true);
+      // Valid: 7 pax in 1 GMC
+      expect(validateVehicleCapacity("GMC", 7, 1).isValid).toBe(true);
+      // Invalid: 8 pax in 1 GMC
+      expect(validateVehicleCapacity("GMC", 8, 1).isValid).toBe(false);
     });
   });
 });

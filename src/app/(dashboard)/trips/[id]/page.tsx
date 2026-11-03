@@ -60,6 +60,7 @@ interface TripDetails {
   eurToMadRate: number;
   groupBusCostSar: number;
   groupBusCount: number;
+  visaCostSar: number;
   status: TripStatus;
   notes?: string | null;
   offers: OfferWithMatrix[];
@@ -479,6 +480,9 @@ export default function TripWorkspacePage() {
             </div>
             <div className="text-sm font-bold text-slate-900">
               EUR/MAD: <span className="text-emerald-700">{trip.eurToMadRate}</span>
+            </div>
+            <div className="text-xs font-semibold text-slate-700 pt-0.5">
+              {t("visaCostPerPax")}: <span className="text-amber-700 font-bold">{trip.visaCostSar || 525} {t("currencySar")}</span>
             </div>
           </div>
           <p className="text-[11px] text-slate-400 mt-1">

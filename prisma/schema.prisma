@@ -29,6 +29,11 @@ enum VehicleType {
   BUS
 }
 
+enum TrainTicketClass {
+  ECONOMY
+  BUSINESS
+}
+
 enum City {
   MAKKAH
   MADINAH
@@ -154,6 +159,7 @@ model UmrahTrip {
   eurToMadRate         Decimal            @default(10.85) @db.Decimal(10, 4)
   groupBusCostSar      Decimal            @default(0.00) @db.Decimal(10, 2)
   groupBusCount        Int                @default(1)
+  visaCostSar          Decimal            @default(525.00) @db.Decimal(10, 2)
   status               TripStatus         @default(DRAFT)
   notes                String?
   offers               Offer[]
@@ -164,68 +170,93 @@ model UmrahTrip {
 }
 
 model Offer {
-  id              String                   @id @default(uuid())
-  tripId          String
-  trip            UmrahTrip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  name            String
-  fixedProfitMad  Decimal                  @default(2000.00) @db.Decimal(10, 2)
-  isActive        Boolean                  @default(true)
-  notes           String?
-  hotelStays      OfferHotelStay[]
-  services        OfferService[]
-  trainExpenses   OfferTrainExpense[]
-  individualQuotes IndividualPilgrimQuote[]
-  createdAt       DateTime                 @default(now())
-  updatedAt       DateTime                 @updatedAt
+  id                   String                     @id @default(uuid())
+  tripId               String
+  trip                 UmrahTrip                  @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  name                 String
+  fixedProfitMad       Decimal                    @default(2000.00) @db.Decimal(10, 2)
+  isActive             Boolean                    @default(true)
+  notes                String?
+  hotelStays           OfferHotelStay[]
+  services             OfferService[]
+  trainExpenses        OfferTrainExpense[]
+  additionalTransports OfferAdditionalTransport[]
+  individualQuotes     IndividualPilgrimQuote[]
+  createdAt            DateTime                   @default(now())
+  updatedAt            DateTime                   @updatedAt
 
   @@map("offers")
 }
 
 model OfferHotelStay {
-  id                 String       @id @default(uuid())
-  offerId            String
-  offer              Offer        @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  city               City
-  hotelName          String
-  checkInDate        DateTime
-  checkOutDate       DateTime
-  nightsCount        Int
-  isNightsOverridden Boolean      @default(false)
-  singleDoubleRateSar Decimal     @db.Decimal(10, 2)
-  tripleRateSar      Decimal      @db.Decimal(10, 2)
-  quadRateSar        Decimal      @db.Decimal(10, 2)
-  notes              String?
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  id                  String   @id @default(uuid())
+  offerId             String
+  offer               Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  city                City
+  hotelName           String
+  checkInDate         DateTime
+  checkOutDate        DateTime
+  nightsCount         Int
+  isNightsOverridden  Boolean  @default(false)
+  singleDoubleRateSar Decimal  @db.Decimal(10, 2)
+  tripleRateSar       Decimal  @db.Decimal(10, 2)
+  quadRateSar         Decimal  @db.Decimal(10, 2)
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   @@map("offer_hotel_stays")
 }
 
+model OfferAdditionalTransport {
+  id                     String      @id @default(uuid())
+  offerId                String
+  offer                  Offer       @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  routeName              String
+  vehicleType            VehicleType
+  vehicleCount           Int         @default(1)
+  capacityPerVehicle     Int         @default(4)
+  allocatedPilgrimsCount Int         @default(40)
+  supplierReferencePrice Decimal     @db.Decimal(10, 2)
+  actualPriceSar         Decimal     @db.Decimal(10, 2)
+  isPriceOverridden      Boolean     @default(false)
+  isIncludedInPackage    Boolean     @default(true)
+  notes                  String?
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+
+  @@map("offer_additional_transports")
+}
+
 model OfferService {
-  id         String             @id @default(uuid())
-  offerId    String
-  offer      Offer              @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  id          String             @id @default(uuid())
+  offerId     String
+  offer       Offer              @relation(fields: [offerId], references: [id], onDelete: Cascade)
   serviceName String
-  costAmount Decimal            @db.Decimal(10, 2)
-  currency   Currency           @default(SAR)
-  costScope  CostAllocationType @default(PER_PERSON)
-  notes      String?
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
+  costAmount  Decimal            @db.Decimal(10, 2)
+  currency    Currency           @default(SAR)
+  costScope   CostAllocationType @default(PER_PERSON)
+  notes       String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   @@map("offer_services")
 }
 
 model OfferTrainExpense {
-  id             String   @id @default(uuid())
-  offerId        String
-  offer          Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
-  routeName      String
-  ticketPriceSar Decimal  @db.Decimal(10, 2)
-  passengerCount Int      @default(1)
-  isIncluded     Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String           @id @default(uuid())
+  offerId          String
+  offer            Offer            @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  departureStation String
+  arrivalStation   String
+  travelDate       DateTime?
+  ticketClass      TrainTicketClass @default(ECONOMY)
+  ticketPriceSar   Decimal          @db.Decimal(10, 2)
+  passengerCount   Int              @default(1)
+  isIncluded       Boolean          @default(true)
+  notes            String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@map("offer_train_expenses")
 }

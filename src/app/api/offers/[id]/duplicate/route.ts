@@ -16,8 +16,9 @@ export async function POST(
       where: { id },
       include: {
         hotelStays: true,
-        services: true,
+        additionalTransports: true,
         trainExpenses: true,
+        services: true,
       },
     });
 
@@ -46,6 +47,32 @@ export async function POST(
             notes: stay.notes,
           })),
         },
+        additionalTransports: {
+          create: originalOffer.additionalTransports.map((t) => ({
+            routeName: t.routeName,
+            vehicleType: t.vehicleType,
+            vehicleCount: t.vehicleCount,
+            capacityPerVehicle: t.capacityPerVehicle,
+            allocatedPilgrimsCount: t.allocatedPilgrimsCount,
+            supplierReferencePrice: t.supplierReferencePrice,
+            actualPriceSar: t.actualPriceSar,
+            isPriceOverridden: t.isPriceOverridden,
+            isIncludedInPackage: t.isIncludedInPackage,
+            notes: t.notes,
+          })),
+        },
+        trainExpenses: {
+          create: originalOffer.trainExpenses.map((tr) => ({
+            departureStation: tr.departureStation,
+            arrivalStation: tr.arrivalStation,
+            travelDate: tr.travelDate,
+            ticketClass: tr.ticketClass,
+            ticketPriceSar: tr.ticketPriceSar,
+            passengerCount: tr.passengerCount,
+            isIncluded: tr.isIncluded,
+            notes: tr.notes,
+          })),
+        },
         services: {
           create: originalOffer.services.map((svc) => ({
             serviceName: svc.serviceName,
@@ -58,6 +85,8 @@ export async function POST(
       },
       include: {
         hotelStays: true,
+        additionalTransports: true,
+        trainExpenses: true,
       },
     });
 

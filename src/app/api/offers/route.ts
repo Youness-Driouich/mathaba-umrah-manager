@@ -8,11 +8,6 @@ export const dynamic = "force-dynamic";
 // GET: All offers across all trips with room price breakdown summary
 export async function GET(_req: NextRequest) {
   try {
-    const globalSettings = await prisma.globalSetting.findUnique({
-      where: { id: "default" },
-    });
-    const visaCostSar = Number(globalSettings?.defaultVisaCostSar ?? 525);
-
     const offers = await prisma.offer.findMany({
       include: {
         trip: {
@@ -29,11 +24,18 @@ export async function GET(_req: NextRequest) {
             sarToMadRate: true,
             eurToMadRate: true,
             groupBusCostSar: true,
+            visaCostSar: true,
             status: true,
           },
         },
         hotelStays: {
           orderBy: { checkInDate: "asc" },
+        },
+        additionalTransports: {
+          orderBy: { createdAt: "asc" },
+        },
+        trainExpenses: {
+          orderBy: { createdAt: "asc" },
         },
         _count: {
           select: { individualQuotes: true },
@@ -44,6 +46,7 @@ export async function GET(_req: NextRequest) {
 
     const calculatedOffers = offers.map((offer) => {
       const { trip } = offer;
+      const visaCostSar = Number(trip.visaCostSar ?? 525);
 
       const hotelInputs: HotelStayInput[] = offer.hotelStays.map((stay) => ({
         id: stay.id,
@@ -55,6 +58,32 @@ export async function GET(_req: NextRequest) {
         singleDoubleNightlyRateSar: Number(stay.singleDoubleRateSar),
         tripleNightlyRateSar: Number(stay.tripleRateSar),
         quadNightlyRateSar: Number(stay.quadRateSar),
+      }));
+
+      const additionalTransportsInputs = offer.additionalTransports.map((t) => ({
+        id: t.id,
+        routeName: t.routeName,
+        vehicleType: t.vehicleType,
+        vehicleCount: t.vehicleCount,
+        capacityPerVehicle: t.capacityPerVehicle,
+        allocatedPilgrimsCount: t.allocatedPilgrimsCount,
+        supplierReferencePrice: Number(t.supplierReferencePrice),
+        actualPriceSar: Number(t.actualPriceSar),
+        isPriceOverridden: t.isPriceOverridden,
+        isIncludedInPackage: t.isIncludedInPackage,
+        notes: t.notes,
+      }));
+
+      const trainExpenseInputs = offer.trainExpenses.map((tr) => ({
+        id: tr.id,
+        departureStation: tr.departureStation,
+        arrivalStation: tr.arrivalStation,
+        travelDate: tr.travelDate,
+        ticketClass: tr.ticketClass,
+        ticketPriceSar: Number(tr.ticketPriceSar),
+        passengerCount: tr.passengerCount,
+        isIncluded: tr.isIncluded,
+        notes: tr.notes,
       }));
 
       const calc = calculateBaselineOffer({
@@ -74,6 +103,8 @@ export async function GET(_req: NextRequest) {
           groupBusTotalSar: Number(trip.groupBusCostSar),
           groupPilgrimCount: trip.expectedPilgrims,
         },
+        additionalTransports: additionalTransportsInputs,
+        trainExpenses: trainExpenseInputs,
         visaCostSar,
         fixedProfitMadPerPilgrim: Number(offer.fixedProfitMad),
       });

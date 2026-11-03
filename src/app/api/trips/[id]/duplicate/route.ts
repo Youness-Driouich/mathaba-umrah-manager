@@ -20,8 +20,9 @@ export async function POST(
         offers: {
           include: {
             hotelStays: true,
-            services: true,
+            additionalTransports: true,
             trainExpenses: true,
+            services: true,
           },
         },
       },
@@ -50,6 +51,7 @@ export async function POST(
         eurToMadRate: originalTrip.eurToMadRate,
         groupBusCostSar: originalTrip.groupBusCostSar,
         groupBusCount: originalTrip.groupBusCount,
+        visaCostSar: originalTrip.visaCostSar,
         status: TripStatus.DRAFT, // Clones default to DRAFT for review
         notes: originalTrip.notes ? `Cloned from "${originalTrip.name}". ${originalTrip.notes}` : `Cloned from "${originalTrip.name}".`,
         offers: {
@@ -72,6 +74,32 @@ export async function POST(
                 notes: stay.notes,
               })),
             },
+            additionalTransports: {
+              create: offer.additionalTransports.map((t) => ({
+                routeName: t.routeName,
+                vehicleType: t.vehicleType,
+                vehicleCount: t.vehicleCount,
+                capacityPerVehicle: t.capacityPerVehicle,
+                allocatedPilgrimsCount: t.allocatedPilgrimsCount,
+                supplierReferencePrice: t.supplierReferencePrice,
+                actualPriceSar: t.actualPriceSar,
+                isPriceOverridden: t.isPriceOverridden,
+                isIncludedInPackage: t.isIncludedInPackage,
+                notes: t.notes,
+              })),
+            },
+            trainExpenses: {
+              create: offer.trainExpenses.map((train) => ({
+                departureStation: train.departureStation,
+                arrivalStation: train.arrivalStation,
+                travelDate: train.travelDate,
+                ticketClass: train.ticketClass,
+                ticketPriceSar: train.ticketPriceSar,
+                passengerCount: train.passengerCount,
+                isIncluded: train.isIncluded,
+                notes: train.notes,
+              })),
+            },
             services: {
               create: offer.services.map((svc) => ({
                 serviceName: svc.serviceName,
@@ -79,14 +107,6 @@ export async function POST(
                 currency: svc.currency,
                 costScope: svc.costScope,
                 notes: svc.notes,
-              })),
-            },
-            trainExpenses: {
-              create: offer.trainExpenses.map((train) => ({
-                routeName: train.routeName,
-                ticketPriceSar: train.ticketPriceSar,
-                passengerCount: train.passengerCount,
-                isIncluded: train.isIncluded,
               })),
             },
           })),
