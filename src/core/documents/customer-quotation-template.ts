@@ -302,6 +302,16 @@ export function renderCustomerQuotationHtml(
 </head>
 <body>
   <div class="page-container">
+    <!-- Standalone Action Bar (Hidden during Print) -->
+    <div class="no-print" style="margin-bottom: 14px; background: #0f172a; color: #ffffff; padding: 10px 16px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+      <div style="font-weight: 700; font-size: 9.5pt;">
+        ${isFr ? "Aperçu A4 officiel — Prêt pour impression ou export PDF" : "معاينة الوثيقة الرسمية (A4) — جاهزة للطباعة أو التصدير كملف PDF"}
+      </div>
+      <button onclick="window.print()" style="background: #059669; color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; font-weight: 700; font-size: 9pt; cursor: pointer;">
+        🖨️ ${isFr ? "Imprimer / Enregistrer en PDF" : "طباعة / حفظ كملف PDF"}
+      </button>
+    </div>
+
     <!-- Header -->
     <header class="header">
       <div>

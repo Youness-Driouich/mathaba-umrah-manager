@@ -103,17 +103,33 @@ export function DocumentViewerModal({
     }
   }, [isOpen, resolvedEntityId, docType, roomCategory, docLanguage, includeMargins]);
 
-  // High-fidelity native browser print-to-PDF
+  // High-fidelity native browser print-to-PDF with mobile-safe handling
   const handlePrint = () => {
+    const isMobile =
+      typeof navigator !== "undefined" &&
+      /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // On iOS Safari and Android Chrome, opening in a new dedicated tab
+      // allows the native print spooler / PDF save sheet to render properly without iframe clipping
+      window.open(getEndpoint("html"), "_blank");
+      return;
+    }
+
     if (iframeRef.current && iframeRef.current.contentWindow) {
-      iframeRef.current.contentWindow.focus();
-      iframeRef.current.contentWindow.print();
-    } else {
-      const printWindow = window.open(getEndpoint("html"), "_blank");
-      if (printWindow) {
-        printWindow.focus();
-        printWindow.onload = () => printWindow.print();
+      try {
+        iframeRef.current.contentWindow.focus();
+        iframeRef.current.contentWindow.print();
+        return;
+      } catch (e) {
+        console.warn("Iframe print invocation failed, falling back to window.open", e);
       }
+    }
+
+    const printWindow = window.open(getEndpoint("html"), "_blank");
+    if (printWindow) {
+      printWindow.focus();
+      printWindow.onload = () => printWindow.print();
     }
   };
 
@@ -305,6 +321,17 @@ export function DocumentViewerModal({
               )}
               <span className="hidden sm:inline">{isFr ? "Télécharger" : "تحميل"}</span>
             </button>
+
+            {/* Standalone Tab Button (Mobile Safari / Chrome Direct PDF Export) */}
+            <a
+              href={getEndpoint("html")}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg border border-slate-700 transition-colors inline-flex items-center justify-center"
+              title={isFr ? "Ouvrir dans un nouvel onglet" : "فتح في نافذة مستقلة"}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
 
             {/* Close Button */}
             <button

@@ -12,7 +12,7 @@ async function main() {
   // Fetch agency settings & trips from real Neon database (read-only)
   const settings = await prisma.globalSetting.findFirst();
   console.log(`Agency Name: ${settings?.agencyName || "وكالة مَثابة"}`);
-  console.log(`Default Visa: ${settings?.defaultVisaFeeSar} SAR`);
+  console.log(`Default Visa: ${settings?.defaultVisaCostSar} SAR`);
 
   const trip = await prisma.umrahTrip.findFirst({
     include: {
@@ -116,7 +116,7 @@ async function main() {
     agencyPhone: settings?.agencyPhone || "+212 522 123 456",
     agencyEmail: settings?.agencyEmail || "contact@mathaba.ma",
     agencyAddress: settings?.agencyAddress || "شارع الحسن الثاني، الدار البيضاء",
-    documentFooterText: settings?.quotationFooterText || "وكالة معتمدة من وزارة السياحة",
+    documentFooterText: settings?.documentFooterText || "وكالة معتمدة من وزارة السياحة",
     tripName: "رحلة رجب 1448",
     tripStartDate: "2026-12-15",
     tripEndDate: "2026-12-25",
