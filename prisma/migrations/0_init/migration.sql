@@ -1,4 +1,4 @@
-﻿-- CreateEnum
+-- CreateEnum
 CREATE TYPE "Role" AS ENUM ('ADMIN', 'STAFF', 'AGENT');
 
 -- CreateEnum
@@ -8,7 +8,10 @@ CREATE TYPE "Currency" AS ENUM ('MAD', 'SAR', 'EUR');
 CREATE TYPE "VehicleType" AS ENUM ('SEDAN', 'GMC', 'STARIA', 'HIACE', 'COASTER', 'BUS');
 
 -- CreateEnum
-CREATE TYPE "City" AS ENUM ('MAKKAH', 'MADINAH');
+CREATE TYPE "TrainTicketClass" AS ENUM ('ECONOMY', 'BUSINESS');
+
+-- CreateEnum
+CREATE TYPE "City" AS ENUM ('MAKKAH', 'MADINAH', 'JEDDAH', 'OTHER');
 
 -- CreateEnum
 CREATE TYPE "RoomCategory" AS ENUM ('SINGLE', 'DOUBLE', 'TRIPLE', 'QUAD');
@@ -20,10 +23,10 @@ CREATE TYPE "CostAllocationType" AS ENUM ('PER_PERSON', 'GROUP_TOTAL');
 CREATE TYPE "TripStatus" AS ENUM ('DRAFT', 'ACTIVE', 'FINALIZED', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "QuoteStatus" AS ENUM ('DRAFT', 'CONFIRMED', 'CANCELLED');
+CREATE TYPE "QuoteStatus" AS ENUM ('DRAFT', 'CONFIRMED', 'CANCELLED', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "CustomizationType" AS ENUM ('ADD_PRIVATE_TRANSPORT', 'REMOVE_SERVICE', 'REPLACE_SERVICE', 'ADDON');
+CREATE TYPE "CustomizationType" AS ENUM ('ADD_PRIVATE_TRANSPORT', 'REMOVE_SERVICE', 'REPLACE_SERVICE', 'ADD_SERVICE', 'CUSTOM_EXPENSE', 'ADDON');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -61,6 +64,10 @@ CREATE TABLE "global_settings" (
     "defaultVisaCostSar" DECIMAL(10,2) NOT NULL DEFAULT 525.00,
     "sarToMadRate" DECIMAL(10,4) NOT NULL DEFAULT 2.70,
     "eurToMadRate" DECIMAL(10,4) NOT NULL DEFAULT 10.85,
+    "documentFooterText" TEXT DEFAULT 'شركة مثابة لخدمات العمرة والأسفار — معتمدون من وزارة السياحة والأوقاف',
+    "quotationTerms" TEXT DEFAULT 'صلاحية جواز السفر لا تقل عن 6 أشهر من تاريخ السفر.
+الأسعار شاملة لرسوم التأشيرة والضرائب المعمول بها.
+تخضع مواعيد الدخول والخروج لسياسات الفنادق المعتمدة بالمملكة العربية السعودية.',
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "global_settings_pkey" PRIMARY KEY ("id")
@@ -70,10 +77,14 @@ CREATE TABLE "global_settings" (
 CREATE TABLE "global_transport_catalog" (
     "id" TEXT NOT NULL,
     "routeName" TEXT NOT NULL,
+    "origin" TEXT,
+    "destination" TEXT,
     "vehicleType" "VehicleType" NOT NULL,
     "capacity" INTEGER NOT NULL,
     "baseCostSar" DECIMAL(10,2) NOT NULL,
     "notes" TEXT,
+    "vatIncluded" BOOLEAN NOT NULL DEFAULT true,
+    "seasonalNote" TEXT,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -103,6 +114,7 @@ CREATE TABLE "umrah_trips" (
     "startDate" TIMESTAMP(3) NOT NULL,
     "endDate" TIMESTAMP(3) NOT NULL,
     "expectedPilgrims" INTEGER NOT NULL DEFAULT 40,
+    "airlineName" TEXT,
     "flightCost" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     "flightCurrency" "Currency" NOT NULL DEFAULT 'MAD',
     "flightAllocationType" "CostAllocationType" NOT NULL DEFAULT 'PER_PERSON',
@@ -110,6 +122,7 @@ CREATE TABLE "umrah_trips" (
     "eurToMadRate" DECIMAL(10,4) NOT NULL DEFAULT 10.85,
     "groupBusCostSar" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     "groupBusCount" INTEGER NOT NULL DEFAULT 1,
+    "visaCostSar" DECIMAL(10,2) NOT NULL DEFAULT 525.00,
     "status" "TripStatus" NOT NULL DEFAULT 'DRAFT',
     "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -153,6 +166,26 @@ CREATE TABLE "offer_hotel_stays" (
 );
 
 -- CreateTable
+CREATE TABLE "offer_additional_transports" (
+    "id" TEXT NOT NULL,
+    "offerId" TEXT NOT NULL,
+    "routeName" TEXT NOT NULL,
+    "vehicleType" "VehicleType" NOT NULL,
+    "vehicleCount" INTEGER NOT NULL DEFAULT 1,
+    "capacityPerVehicle" INTEGER NOT NULL DEFAULT 4,
+    "allocatedPilgrimsCount" INTEGER NOT NULL DEFAULT 40,
+    "supplierReferencePrice" DECIMAL(10,2) NOT NULL,
+    "actualPriceSar" DECIMAL(10,2) NOT NULL,
+    "isPriceOverridden" BOOLEAN NOT NULL DEFAULT false,
+    "isIncludedInPackage" BOOLEAN NOT NULL DEFAULT true,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "offer_additional_transports_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "offer_services" (
     "id" TEXT NOT NULL,
     "offerId" TEXT NOT NULL,
@@ -171,10 +204,14 @@ CREATE TABLE "offer_services" (
 CREATE TABLE "offer_train_expenses" (
     "id" TEXT NOT NULL,
     "offerId" TEXT NOT NULL,
-    "routeName" TEXT NOT NULL,
+    "departureStation" TEXT NOT NULL,
+    "arrivalStation" TEXT NOT NULL,
+    "travelDate" TIMESTAMP(3),
+    "ticketClass" "TrainTicketClass" NOT NULL DEFAULT 'ECONOMY',
     "ticketPriceSar" DECIMAL(10,2) NOT NULL,
     "passengerCount" INTEGER NOT NULL DEFAULT 1,
     "isIncluded" BOOLEAN NOT NULL DEFAULT true,
+    "notes" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -208,6 +245,7 @@ CREATE TABLE "quote_customization_items" (
     "description" TEXT NOT NULL,
     "supplierCostDeltaMad" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     "sellingPriceDeltaMad" DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    "details" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -231,6 +269,9 @@ ALTER TABLE "offers" ADD CONSTRAINT "offers_tripId_fkey" FOREIGN KEY ("tripId") 
 
 -- AddForeignKey
 ALTER TABLE "offer_hotel_stays" ADD CONSTRAINT "offer_hotel_stays_offerId_fkey" FOREIGN KEY ("offerId") REFERENCES "offers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "offer_additional_transports" ADD CONSTRAINT "offer_additional_transports_offerId_fkey" FOREIGN KEY ("offerId") REFERENCES "offers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "offer_services" ADD CONSTRAINT "offer_services_offerId_fkey" FOREIGN KEY ("offerId") REFERENCES "offers"("id") ON DELETE CASCADE ON UPDATE CASCADE;

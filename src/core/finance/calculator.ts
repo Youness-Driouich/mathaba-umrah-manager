@@ -433,8 +433,10 @@ export function calculateIndividualQuote(
   }> = [];
 
   // Process structured customization items (7 Exception Types)
-  if (input.customizationItems && input.customizationItems.length > 0) {
-    for (const item of input.customizationItems) {
+  // Supports both customizationItems and customizations property names for resilience
+  const items = input.customizationItems || input.customizations || [];
+  if (items && items.length > 0) {
+    for (const item of items) {
       const delta = new Decimal(item.supplierCostDeltaMad || 0);
       const sellingDelta = new Decimal(item.sellingPriceDeltaMad || 0);
 

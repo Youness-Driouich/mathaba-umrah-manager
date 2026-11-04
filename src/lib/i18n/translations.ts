@@ -241,6 +241,11 @@ export const translations = {
     quoteStatus: "حالة العرض",
     filterByStatus: "تصفية حسب الحالة",
     allStatuses: "جميع الحالات",
+    previewCustomerQuotation: "معاينة عرض السعر",
+    internalFinancialReport: "التقرير المالي الداخلي",
+    customerQuotationTitle: "عرض سعر معتمر",
+    printDocument: "طباعة المستند",
+    downloadPdf: "تحميل PDF",
   },
 
   en: {
@@ -483,5 +488,10 @@ export const translations = {
     quoteStatus: "Quote Status",
     filterByStatus: "Filter by Status",
     allStatuses: "All Statuses",
+    previewCustomerQuotation: "Preview Quotation",
+    internalFinancialReport: "Internal Financial Report",
+    customerQuotationTitle: "Customer Quotation",
+    printDocument: "Print Document",
+    downloadPdf: "Download PDF",
   },
 };

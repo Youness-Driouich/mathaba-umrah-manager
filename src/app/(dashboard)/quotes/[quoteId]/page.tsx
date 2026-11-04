@@ -32,6 +32,7 @@ import {
 import { useLanguage } from "@/lib/i18n/language-context";
 import { RoomCategory, QuoteStatus, CustomizationType, VehicleType } from "@prisma/client";
 import { VEHICLE_CAPACITIES } from "@/core/finance/calculator";
+import { DocumentViewerModal } from "@/components/documents/document-viewer-modal";
 
 interface CustomizationItem {
   id: string;
@@ -125,6 +126,10 @@ export default function QuoteCustomizerPage({
   const [arbitraryAdjustmentMad, setArbitraryAdjustmentMad] = useState<number>(0);
   const [adjustmentReason, setAdjustmentReason] = useState("");
   const [status, setStatus] = useState<QuoteStatus>(QuoteStatus.DRAFT);
+
+  // Document Viewer Modal State (Phase 6)
+  const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
+  const [docViewerDocType, setDocViewerDocType] = useState<"quotation" | "internal_report">("quotation");
 
   // Modal State for adding exception
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -520,6 +525,30 @@ export default function QuoteCustomizerPage({
 
         {/* Action Buttons */}
         <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => {
+              setDocViewerDocType("quotation");
+              setIsDocViewerOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+            title={t("previewCustomerQuotation")}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>{t("previewCustomerQuotation")}</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setDocViewerDocType("internal_report");
+              setIsDocViewerOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+            title={t("internalFinancialReport")}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{t("internalFinancialReport")}</span>
+          </button>
+
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as QuoteStatus)}
@@ -1298,6 +1327,16 @@ export default function QuoteCustomizerPage({
             </form>
           </div>
         </div>
+      )}
+      {/* Document Viewer Modal (Phase 6) */}
+      {isDocViewerOpen && (
+        <DocumentViewerModal
+          isOpen={isDocViewerOpen}
+          onClose={() => setIsDocViewerOpen(false)}
+          targetType="quote"
+          targetId={quote.id}
+          initialDocType={docViewerDocType}
+        />
       )}
     </div>
   );

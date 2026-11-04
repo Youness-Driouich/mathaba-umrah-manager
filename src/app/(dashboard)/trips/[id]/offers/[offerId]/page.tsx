@@ -29,10 +29,12 @@ import {
   Users,
   Copy,
   Eye,
+  FileText,
 } from "lucide-react";
 import { City, VehicleType, TrainTicketClass, RoomCategory, QuoteStatus } from "@prisma/client";
 import { useLanguage } from "@/lib/i18n/language-context";
 import { VEHICLE_CAPACITIES, validateVehicleCapacity } from "@/core/finance/calculator";
+import { DocumentViewerModal } from "@/components/documents/document-viewer-modal";
 
 interface HotelStay {
   id: string;
@@ -278,6 +280,28 @@ export default function OfferPricingWorkspacePage() {
     arbitraryAdjustmentMad: 0,
     adjustmentReason: "",
   });
+
+  // --- Document Viewer Modal State (Phase 6) ---
+  const [isDocViewerOpen, setIsDocViewerOpen] = useState(false);
+  const [docViewerTargetType, setDocViewerTargetType] = useState<"offer" | "quote">("offer");
+  const [docViewerTargetId, setDocViewerTargetId] = useState<string>("");
+  const [docViewerDocType, setDocViewerDocType] = useState<"quotation" | "internal_report">("quotation");
+  const [docViewerRoom, setDocViewerRoom] = useState<RoomCategory>(RoomCategory.DOUBLE);
+
+  const handleOpenOfferDoc = (docType: "quotation" | "internal_report", room: RoomCategory = RoomCategory.DOUBLE) => {
+    setDocViewerTargetType("offer");
+    setDocViewerTargetId(offerId as string);
+    setDocViewerDocType(docType);
+    setDocViewerRoom(room);
+    setIsDocViewerOpen(true);
+  };
+
+  const handleOpenQuoteDoc = (quoteId: string, docType: "quotation" | "internal_report") => {
+    setDocViewerTargetType("quote");
+    setDocViewerTargetId(quoteId);
+    setDocViewerDocType(docType);
+    setIsDocViewerOpen(true);
+  };
 
   const fetchOfferQuotes = async () => {
     try {
@@ -860,7 +884,25 @@ export default function OfferPricingWorkspacePage() {
         </div>
 
         {/* Top Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => handleOpenOfferDoc("quotation")}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+            title={t("previewCustomerQuotation")}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>{t("previewCustomerQuotation")}</span>
+          </button>
+
+          <button
+            onClick={() => handleOpenOfferDoc("internal_report")}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-xl transition-all shadow-xs cursor-pointer"
+            title={t("internalFinancialReport")}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>{t("internalFinancialReport")}</span>
+          </button>
+
           <button
             onClick={fetchOfferDetails}
             className="inline-flex items-center gap-1.5 px-3 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-all cursor-pointer shadow-2xs"
@@ -1758,9 +1800,16 @@ export default function OfferPricingWorkspacePage() {
 
                       <td className="py-3 px-3 text-center">
                         <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenQuoteDoc(q.id, "quotation")}
+                            className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
+                            title={t("previewCustomerQuotation")}
+                          >
+                            <FileText className="w-4 h-4" />
+                          </button>
                           <Link
                             href={`/quotes/${q.id}`}
-                            className="p-1.5 text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
                             title={t("viewQuote")}
                           >
                             <Eye className="w-4 h-4" />
@@ -2407,6 +2456,17 @@ export default function OfferPricingWorkspacePage() {
             </form>
           </div>
         </div>
+      )}
+      {/* Document Viewer Modal (Phase 6) */}
+      {isDocViewerOpen && (
+        <DocumentViewerModal
+          isOpen={isDocViewerOpen}
+          onClose={() => setIsDocViewerOpen(false)}
+          targetType={docViewerTargetType}
+          targetId={docViewerTargetId}
+          initialDocType={docViewerDocType}
+          initialRoomCategory={docViewerRoom}
+        />
       )}
     </div>
   );

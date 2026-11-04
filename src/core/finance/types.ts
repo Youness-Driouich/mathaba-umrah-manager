@@ -195,6 +195,7 @@ export interface IndividualExceptionInput {
   privateTransportAddonsMad?: Decimal | number | string;
   serviceCostDeltasMad?: Decimal | number | string;
   customizationItems?: QuoteCustomizationItemInput[];
+  customizations?: QuoteCustomizationItemInput[];
 }
 
 export interface IndividualPilgrimQuoteResult {
@@ -225,22 +226,157 @@ export interface IndividualPilgrimQuoteResult {
  * Strictly hides internal supplier costs, margins, and breakdown deltas.
  */
 export interface CustomerFacingQuotation {
+  referenceNumber: string;
+  issueDate: string;
   agencyName: string;
+  agencyPhone?: string | null;
+  agencyEmail?: string | null;
+  agencyAddress?: string | null;
+  documentFooterText?: string | null;
   tripName: string;
+  tripStartDate?: string;
+  tripEndDate?: string;
   offerName: string;
   pilgrimName?: string;
+  contactPhone?: string | null;
+  isIndividualQuote: boolean;
+  isDraft: boolean;
   roomCategory: RoomCategoryType;
+  roomMatrixPrices?: Record<RoomCategoryType, number>;
   hotelStays: Array<{
-    city: "MAKKAH" | "MADINAH";
+    city: "MAKKAH" | "MADINAH" | "JEDDAH" | "OTHER";
     hotelName: string;
     checkInDate: string;
     checkOutDate: string;
     nights: number;
   }>;
+  flightDetails?: {
+    airlineName?: string;
+    flightIncluded: boolean;
+    description: string;
+  };
+  transportServices: Array<{
+    routeName: string;
+    vehicleType?: string;
+    isPrivate?: boolean;
+    description: string;
+  }>;
+  trainJourneys?: Array<{
+    departureStation: string;
+    arrivalStation: string;
+    ticketClass: "ECONOMY" | "BUSINESS";
+    travelDate?: string;
+  }>;
   includedServices: string[];
-  flightIncluded: boolean;
-  transportIncluded: string;
+  customizationDescriptions?: string[];
   finalSellingPriceMad: number; // formatted as retail number
   currency: "MAD";
-  termsAndConditions?: string[];
+  termsAndConditions: string[];
+}
+
+/**
+ * Confidential data contract for Internal Financial Audit Report
+ * Visible exclusively to authorized agency administrators.
+ */
+export interface InternalFinancialReportData {
+  isConfidential: true;
+  reportReference: string;
+  generationDate: string;
+  isDraft: boolean;
+  isDeficit: boolean;
+  deficitAmountMad: number;
+  agencyName: string;
+  tripName: string;
+  tripDates: {
+    start: string;
+    end: string;
+    nightsCount?: number;
+  };
+  expectedPilgrims: number;
+  exchangeRates: {
+    sarToMad: number;
+    eurToMad: number;
+  };
+  offerName: string;
+  pilgrimName?: string;
+  isIndividualQuote: boolean;
+  roomCategory: RoomCategoryType;
+  hotelStaysBreakdown: Array<{
+    hotelName: string;
+    city: string;
+    checkInDate: string;
+    checkOutDate: string;
+    nights: number;
+    isOverridden: boolean;
+    singleDoubleRateSar: number;
+    tripleRateSar: number;
+    quadRateSar: number;
+    fullRoomTotalSar: number;
+    perPersonSar: number;
+    perPersonMad: number;
+  }>;
+  flightExpense: {
+    amount: number;
+    currency: string;
+    allocationType: string;
+    perPilgrimMad: number;
+  };
+  visaExpense: {
+    perPilgrimSar: number;
+    perPilgrimMad: number;
+    isHistoricalSnapshot: boolean;
+  };
+  groupBusExpense: {
+    totalCostSar: number;
+    pilgrimCount: number;
+    perPilgrimSar: number;
+    perPilgrimMad: number;
+    isMaintained: boolean;
+  };
+  additionalTransports: Array<{
+    routeName: string;
+    vehicleType: string;
+    vehicleCount: number;
+    capacity: number;
+    allocatedPilgrims: number;
+    priceSar: number;
+    perPilgrimSar: number;
+    perPilgrimMad: number;
+    isIncluded: boolean;
+  }>;
+  trainExpenses: Array<{
+    departureStation: string;
+    arrivalStation: string;
+    ticketClass: string;
+    ticketPriceSar: number;
+    passengerCount: number;
+    perPilgrimMad: number;
+    isIncluded: boolean;
+  }>;
+  additionalServices: Array<{
+    serviceName: string;
+    amount: number;
+    currency: string;
+    perPilgrimMad: number;
+  }>;
+  individualCustomizations?: Array<{
+    type: string;
+    description: string;
+    supplierCostDeltaMad: number;
+    isRecoverable?: boolean;
+    details?: any;
+  }>;
+  roomPricingSummary: {
+    baseActualCostMad: number;
+    supplierCostAdditionsMad: number;
+    supplierCostReductionsMad: number;
+    netSupplierCostDeltaMad: number;
+    newActualCostMad: number;
+    configuredProfitMad: number;
+    isProfitOverridden: boolean;
+    commercialDiscountMad: number;
+    finalSellingPriceMad: number;
+    realizedProfitMad: number;
+  };
+  multiRoomBreakdowns?: Record<RoomCategoryType, RoomCostBreakdown>;
 }

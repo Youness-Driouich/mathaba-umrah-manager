@@ -5,6 +5,15 @@ import prisma from "@/lib/prisma";
 
 export const AUTH_COOKIE_NAME = "mathaba_session";
 
+export class AuthError extends Error {
+  status: number;
+  constructor(message: string, status: number = 401) {
+    super(message);
+    this.name = "AuthError";
+    this.status = status;
+  }
+}
+
 /**
  * Retrieves the currently authenticated user from server components or API routes.
  */
@@ -57,10 +66,10 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 export async function requireAdmin(): Promise<AuthUser> {
   const user = await getCurrentUser();
   if (!user) {
-    throw new Error("Unauthorized: Please sign in to access this resource.");
+    throw new AuthError("Unauthorized: Please sign in to access this resource.", 401);
   }
   if (user.role !== "ADMIN") {
-    throw new Error("Forbidden: Administrator privileges required.");
+    throw new AuthError("Forbidden: Administrator privileges required.", 403);
   }
   return user;
 }

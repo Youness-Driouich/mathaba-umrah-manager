@@ -34,13 +34,23 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Fetch event: Network-first for dynamic content; NEVER cache /api/* (confidential financial data)
+// Fetch event: Network-first for dynamic content; NEVER cache sensitive financial data or document APIs
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // 1. NEVER cache API requests or authentication endpoints
-  if (url.pathname.startsWith("/api/")) {
-    return; // Pass directly to network
+  // 1. NEVER cache API requests, financial reports, quotations, or management routes
+  if (
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/reports") ||
+    url.pathname.startsWith("/quotes") ||
+    url.pathname.startsWith("/trips") ||
+    url.pathname.startsWith("/settings") ||
+    url.pathname.startsWith("/transport-catalog") ||
+    url.pathname.includes("quotation") ||
+    url.pathname.includes("report") ||
+    url.pathname.includes("internal")
+  ) {
+    return; // Pass directly to network with zero caching
   }
 
   // 2. Cache-first strategy for static assets (fonts, icons, styles)

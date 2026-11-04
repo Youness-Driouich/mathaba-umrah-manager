@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -111,6 +112,8 @@ model GlobalSetting {
   defaultVisaCostSar Decimal  @default(525.00) @db.Decimal(10, 2)
   sarToMadRate       Decimal  @default(2.70) @db.Decimal(10, 4)
   eurToMadRate       Decimal  @default(10.85) @db.Decimal(10, 4)
+  documentFooterText String?  @default("شركة مثابة لخدمات العمرة والأسفار — معتمدون من وزارة السياحة والأوقاف")
+  quotationTerms     String?  @default("صلاحية جواز السفر لا تقل عن 6 أشهر من تاريخ السفر.\nالأسعار شاملة لرسوم التأشيرة والضرائب المعمول بها.\nتخضع مواعيد الدخول والخروج لسياسات الفنادق المعتمدة بالمملكة العربية السعودية.")
   updatedAt          DateTime @updatedAt
 
   @@map("global_settings")

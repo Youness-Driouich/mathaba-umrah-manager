@@ -13,6 +13,8 @@ const updateSettingsSchema = z.object({
   defaultVisaCostSar: z.number().min(0, "Visa cost must be positive"),
   sarToMadRate: z.number().gt(0, "SAR to MAD rate must be greater than zero"),
   eurToMadRate: z.number().gt(0, "EUR to MAD rate must be greater than zero"),
+  documentFooterText: z.string().optional().nullable(),
+  quotationTerms: z.string().optional().nullable(),
 });
 
 // GET: Retrieve current global settings
@@ -49,6 +51,8 @@ export async function GET() {
         defaultVisaCostSar: Number(settings.defaultVisaCostSar),
         sarToMadRate: Number(settings.sarToMadRate),
         eurToMadRate: Number(settings.eurToMadRate),
+        documentFooterText: settings.documentFooterText,
+        quotationTerms: settings.quotationTerms,
         updatedAt: settings.updatedAt,
       },
     });
@@ -84,6 +88,8 @@ export async function PUT(req: NextRequest) {
       defaultVisaCostSar,
       sarToMadRate,
       eurToMadRate,
+      documentFooterText,
+      quotationTerms,
     } = parsed.data;
 
     const updated = await prisma.globalSetting.upsert({
@@ -96,6 +102,8 @@ export async function PUT(req: NextRequest) {
         defaultVisaCostSar,
         sarToMadRate,
         eurToMadRate,
+        documentFooterText: documentFooterText || null,
+        quotationTerms: quotationTerms || null,
       },
       create: {
         id: "default",
@@ -106,6 +114,8 @@ export async function PUT(req: NextRequest) {
         defaultVisaCostSar,
         sarToMadRate,
         eurToMadRate,
+        documentFooterText: documentFooterText || null,
+        quotationTerms: quotationTerms || null,
       },
     });
 
@@ -121,6 +131,8 @@ export async function PUT(req: NextRequest) {
         defaultVisaCostSar: Number(updated.defaultVisaCostSar),
         sarToMadRate: Number(updated.sarToMadRate),
         eurToMadRate: Number(updated.eurToMadRate),
+        documentFooterText: updated.documentFooterText,
+        quotationTerms: updated.quotationTerms,
         updatedAt: updated.updatedAt,
       },
     });

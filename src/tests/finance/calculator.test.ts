@@ -152,6 +152,59 @@ describe("Mathaba Umrah Manager — Financial Calculation Engine", () => {
       expect(customized.isDeficit).toBe(false);
     });
 
+    it("MANDATORY AUDIT TEST: Additional GMC supplier cost (+540 MAD) with 300 MAD discount produces exactly 16,842 MAD new cost, 18,542 MAD selling price, and 1,700 MAD profit", () => {
+      const baselineMock = {
+        roomCategory: "DOUBLE" as const,
+        occupancy: 2,
+        hotelCostMad: new Decimal(6412.5),
+        flightCostMad: new Decimal(7500),
+        transportCostMad: new Decimal(297),
+        groupBusCostMad: new Decimal(297),
+        additionalTransportCostMad: new Decimal(0),
+        trainCostMad: new Decimal(675),
+        visaCostMad: new Decimal(1417.5),
+        servicesCostMad: new Decimal(0),
+        totalActualCostMad: new Decimal(16302),
+        configuredProfitMad: new Decimal(2000),
+        sellingPriceBeforeDiscountMad: new Decimal(18302),
+        discountMad: new Decimal(0),
+        finalSellingPriceMad: new Decimal(18302),
+        effectiveProfitMad: new Decimal(2000),
+        isDeficit: false,
+      };
+
+      const customized = calculateIndividualQuote("El Tazi Pilgrim", {
+        baselineBreakdown: baselineMock,
+        commercialDiscountMad: 300,
+        customizationItems: [
+          {
+            type: "ADD_PRIVATE_TRANSPORT",
+            description: "Private GMC Share (3 pilgrims)",
+            supplierCostDeltaMad: 540,
+            sellingPriceDeltaMad: 540,
+          },
+        ],
+      });
+
+      // Verification of Step 0 Financial Equation:
+      // Base Actual Cost = 16,302 MAD
+      // GMC Supplier Delta = +540 MAD
+      // New Actual Cost = 16,302 + 540 = 16,842 MAD
+      // Configured Profit = 2,000 MAD
+      // Commercial Discount = -300 MAD
+      // Selling Price Before Discount = 16,842 + 2,000 = 18,842 MAD
+      // Final Selling Price = 18,842 - 300 = 18,542 MAD
+      // Realized Profit = 18,542 - 16,842 = 1,700 MAD
+      expect(customized.supplierCostMad.toNumber()).toBe(16302);
+      expect(customized.supplierCostDeltaMad.toNumber()).toBe(540);
+      expect(customized.totalEffectiveCostMad.toNumber()).toBe(16842);
+      expect(customized.baseProfitMad.toNumber()).toBe(2000);
+      expect(customized.appliedDiscountMad.toNumber()).toBe(300);
+      expect(customized.finalSellingPriceMad.toNumber()).toBe(18542);
+      expect(customized.netProfitMad.toNumber()).toBe(1700);
+      expect(customized.isDeficit).toBe(false);
+    });
+
     it("Flags deficit warning when selling price falls below supplier cost", () => {
       const baselineMock = {
         roomCategory: "DOUBLE" as const,
@@ -283,8 +336,11 @@ describe("Mathaba Umrah Manager — Financial Calculation Engine", () => {
           "Air-conditioned VIP group bus transfers",
           "Umrah Visa processing",
         ],
-        flightIncluded: true,
-        transportIncluded: "VIP Bus",
+        flightDetails: {
+          airlineName: "Royal Air Maroc",
+          flightIncluded: true,
+          description: "Direct flights with Royal Air Maroc",
+        },
       });
 
       // 1. Verify required customer attributes are present

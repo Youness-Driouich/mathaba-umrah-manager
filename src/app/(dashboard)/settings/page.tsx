@@ -21,6 +21,8 @@ interface GlobalSettingsData {
   defaultVisaCostSar: number;
   sarToMadRate: number;
   eurToMadRate: number;
+  documentFooterText?: string | null;
+  quotationTerms?: string | null;
   updatedAt?: string;
 }
 
@@ -33,6 +35,8 @@ export default function GlobalSettingsPage() {
     defaultVisaCostSar: 525,
     sarToMadRate: 2.7,
     eurToMadRate: 10.85,
+    documentFooterText: "شركة مثابة لخدمات العمرة والأسفار — معتمدون من وزارة السياحة والأوقاف",
+    quotationTerms: "صلاحية جواز السفر لا تقل عن 6 أشهر من تاريخ السفر.\nالأسعار شاملة لرسوم التأشيرة والضرائب المعمول بها.\nتخضع مواعيد الدخول والخروج لسياسات الفنادق المعتمدة بالمملكة العربية السعودية.",
   });
 
   const [loading, setLoading] = useState(true);
@@ -53,6 +57,8 @@ export default function GlobalSettingsPage() {
           defaultVisaCostSar: data.settings.defaultVisaCostSar ?? 525,
           sarToMadRate: data.settings.sarToMadRate ?? 2.7,
           eurToMadRate: data.settings.eurToMadRate ?? 10.85,
+          documentFooterText: data.settings.documentFooterText || "",
+          quotationTerms: data.settings.quotationTerms || "",
           updatedAt: data.settings.updatedAt,
         });
       }
@@ -312,6 +318,48 @@ export default function GlobalSettingsPage() {
               </div>
               <p className="text-[11px] text-slate-500 mt-1">
                 1 Euro (EUR) in Moroccan Dirhams (MAD).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: Document & Quotation Branding */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+            <Info className="w-4 h-4 text-emerald-700" />
+            <h2 className="font-bold text-sm text-slate-900">Document Branding & Terms (عروض الأسعار والتقارير)</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Official Document Footer Text (نص التذييل الرسمي في الوثائق)
+              </label>
+              <input
+                type="text"
+                value={formData.documentFooterText || ""}
+                onChange={(e) => setFormData({ ...formData, documentFooterText: e.target.value })}
+                placeholder="شركة مثابة لخدمات العمرة والأسفار — معتمدون من وزارة السياحة والأوقاف"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                يظهر أسفل جميع عروض الأسعار والتقارير المالية المطبوعة والمصدرة بصيغة PDF.
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Standard Quotation Terms & Conditions (الشروط والأحكام الافتراضية لعروض المعتمرين)
+              </label>
+              <textarea
+                rows={3}
+                value={formData.quotationTerms || ""}
+                onChange={(e) => setFormData({ ...formData, quotationTerms: e.target.value })}
+                placeholder="شروط الجواز، التأشيرة، والإلغاء..."
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                البنود والضوابط المطبوعة في عروض الأسعار الموجهة للمعتمرين.
               </p>
             </div>
           </div>
