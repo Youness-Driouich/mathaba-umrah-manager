@@ -18,6 +18,7 @@ export async function GET(
     const { id: quoteId } = await params;
     const { searchParams } = new URL(req.url);
     const format = searchParams.get("format") || "json";
+    const lang = (searchParams.get("lang") || searchParams.get("language") || "ar") as "ar" | "fr";
 
     const quote = await prisma.individualPilgrimQuote.findUnique({
       where: { id: quoteId },
@@ -114,9 +115,10 @@ export async function GET(
       }));
 
     const quotation = projectCustomerFacingQuotation({
+      documentLanguage: lang,
       referenceNumber: `MTH-Q-${quote.id.substring(0, 6).toUpperCase()}`,
       issueDate: new Date(quote.createdAt).toISOString().split("T")[0],
-      agencyName: settings?.agencyName || "Mathaba Umrah Services",
+      agencyName: settings?.agencyName || (lang === "fr" ? "Agence Mathaba Voyages" : "وكالة مَثابة لأسفار العمرة"),
       agencyPhone: settings?.agencyPhone,
       agencyEmail: settings?.agencyEmail,
       agencyAddress: settings?.agencyAddress,
@@ -148,8 +150,8 @@ export async function GET(
         airlineName: trip.airlineName || undefined,
         flightIncluded: Number(trip.flightCost) > 0,
         description: trip.airlineName
-          ? `طيران دولي مباشر على متن ${trip.airlineName}`
-          : "تذكرة طيران دولية مشمولة",
+          ? (lang === "fr" ? `Vol direct avec ${trip.airlineName}` : `طيران دولي مباشر على متن ${trip.airlineName}`)
+          : (lang === "fr" ? "Billet d'avion international inclus" : "تذكرة طيران دولية مشمولة"),
       },
       transportServices,
       trainJourneys,
@@ -167,7 +169,7 @@ export async function GET(
     }
 
     if (format === "html") {
-      const html = renderCustomerQuotationHtml(quotation);
+      const html = renderCustomerQuotationHtml(quotation, lang);
       return new NextResponse(html, {
         headers: {
           "Content-Type": "text/html; charset=utf-8",
@@ -177,15 +179,26 @@ export async function GET(
     }
 
     if (format === "pdf") {
-      const html = renderCustomerQuotationHtml(quotation);
-      const pdfBuffer = await generatePdfFromHtml(html);
-      return new NextResponse(pdfBuffer as any, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="Mathaba-Quote-${quote.pilgrimName.replace(/\s+/g, "-")}.pdf"`,
-          ...DOCUMENT_NO_CACHE_HEADERS,
-        },
-      });
+      const html = renderCustomerQuotationHtml(quotation, lang);
+      try {
+        const pdfBuffer = await generatePdfFromHtml(html);
+        return new NextResponse(pdfBuffer as any, {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="Mathaba-Quote-${quote.pilgrimName.replace(/\s+/g, "-")}.pdf"`,
+            ...DOCUMENT_NO_CACHE_HEADERS,
+          },
+        });
+      } catch (pdfErr) {
+        console.warn("Serverless Chromium unavailable, falling back to printable HTML:", pdfErr);
+        return new NextResponse(html, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "X-Pdf-Fallback": "browser-print-required",
+            ...DOCUMENT_NO_CACHE_HEADERS,
+          },
+        });
+      }
     }
 
     return NextResponse.json({ quotation }, { headers: DOCUMENT_NO_CACHE_HEADERS });

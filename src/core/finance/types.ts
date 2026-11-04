@@ -226,6 +226,7 @@ export interface IndividualPilgrimQuoteResult {
  * Strictly hides internal supplier costs, margins, and breakdown deltas.
  */
 export interface CustomerFacingQuotation {
+  documentLanguage?: "ar" | "fr";
   referenceNumber: string;
   issueDate: string;
   agencyName: string;
@@ -280,6 +281,8 @@ export interface CustomerFacingQuotation {
  */
 export interface InternalFinancialReportData {
   isConfidential: true;
+  documentLanguage?: "ar" | "fr";
+  includeMargins?: boolean;
   reportReference: string;
   generationDate: string;
   isDraft: boolean;

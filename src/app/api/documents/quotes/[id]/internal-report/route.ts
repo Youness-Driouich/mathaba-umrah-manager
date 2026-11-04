@@ -22,6 +22,8 @@ export async function GET(
     const { id: quoteId } = await params;
     const { searchParams } = new URL(req.url);
     const format = searchParams.get("format") || "json";
+    const lang = (searchParams.get("lang") || searchParams.get("language") || "ar") as "ar" | "fr";
+    const includeMargins = searchParams.get("includeMargins") === "true"; // default false for shareable cost statement
 
     const quote = await prisma.individualPilgrimQuote.findUnique({
       where: { id: quoteId },
@@ -98,10 +100,12 @@ export async function GET(
     });
 
     const reportData = buildInternalFinancialReportData({
+      documentLanguage: lang,
+      includeMargins,
       reportReference: `MTH-AUDIT-Q-${quote.id.substring(0, 6).toUpperCase()}`,
       generationDate: new Date().toISOString().split("T")[0],
       isDraft: quote.status === QuoteStatus.DRAFT,
-      agencyName: settings?.agencyName || "Mathaba Umrah Services",
+      agencyName: settings?.agencyName || (lang === "fr" ? "Agence Mathaba Voyages" : "وكالة مَثابة لأسفار العمرة"),
       tripName: trip.name,
       tripDates: {
         start: new Date(trip.startDate).toISOString().split("T")[0],
@@ -185,7 +189,7 @@ export async function GET(
     });
 
     if (format === "html") {
-      const html = renderInternalFinancialReportHtml(reportData);
+      const html = renderInternalFinancialReportHtml(reportData, lang, includeMargins);
       return new NextResponse(html, {
         headers: {
           "Content-Type": "text/html; charset=utf-8",
@@ -195,15 +199,26 @@ export async function GET(
     }
 
     if (format === "pdf") {
-      const html = renderInternalFinancialReportHtml(reportData);
-      const pdfBuffer = await generatePdfFromHtml(html);
-      return new NextResponse(pdfBuffer as any, {
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `inline; filename="Mathaba-Internal-Report-${quote.pilgrimName.replace(/\s+/g, "-")}.pdf"`,
-          ...DOCUMENT_NO_CACHE_HEADERS,
-        },
-      });
+      const html = renderInternalFinancialReportHtml(reportData, lang, includeMargins);
+      try {
+        const pdfBuffer = await generatePdfFromHtml(html);
+        return new NextResponse(pdfBuffer as any, {
+          headers: {
+            "Content-Type": "application/pdf",
+            "Content-Disposition": `inline; filename="Mathaba-Internal-Report-${quote.pilgrimName.replace(/\s+/g, "-")}.pdf"`,
+            ...DOCUMENT_NO_CACHE_HEADERS,
+          },
+        });
+      } catch (pdfErr) {
+        console.warn("Serverless Chromium unavailable, falling back to printable HTML:", pdfErr);
+        return new NextResponse(html, {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "X-Pdf-Fallback": "browser-print-required",
+            ...DOCUMENT_NO_CACHE_HEADERS,
+          },
+        });
+      }
     }
 
     return NextResponse.json({ report: reportData }, { headers: DOCUMENT_NO_CACHE_HEADERS });

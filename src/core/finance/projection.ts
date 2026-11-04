@@ -8,6 +8,7 @@ import {
 } from "./types";
 
 export interface ProjectCustomerQuotationParams {
+  documentLanguage?: "ar" | "fr";
   referenceNumber?: string;
   issueDate?: string;
   agencyName: string;
@@ -93,17 +94,27 @@ export function projectCustomerFacingQuotation(
     QUAD: offerResult.roomBreakdowns.QUAD.finalSellingPriceMad.toNumber(),
   };
 
-  const defaultTerms = [
-    "صلاحية جواز السفر لا تقل عن 6 أشهر من تاريخ السفر المعتمد.",
-    "الأسعار تشمل رسوم التأشيرة والضرائب المعمول بها في المملكة العربية السعودية والمغرب.",
-    "مواعيد الدخول والخروج تخضع لسياسات الفنادق المعتمدة بالمملكة.",
-    "العرض ساري لمدة 7 أيام من تاريخ إصداره ما لم يُؤكد الحجز رسمياً.",
-  ];
+  const isFr = params.documentLanguage === "fr";
+
+  const defaultTerms = isFr
+    ? [
+        "Passeport en cours de validité d'au moins 6 mois à compter de la date de départ.",
+        "Les prix comprennent les frais de visa et les taxes réglementaires applicables au Maroc et en Arabie Saoudite.",
+        "Les horaires d'enregistrement (check-in 16h00) et de départ (check-out 12h00) sont soumis aux règles hôtelières.",
+        "La présente offre est valable 7 jours ouvrables à compter de sa date d'émission.",
+      ]
+    : [
+        "صلاحية جواز السفر لا تقل عن 6 أشهر من تاريخ السفر المعتمد.",
+        "الأسعار تشمل رسوم التأشيرة والضرائب المعمول بها في المملكة العربية السعودية والمغرب.",
+        "مواعيد الدخول والخروج تخضع لسياسات الفنادق المعتمدة بالمملكة.",
+        "العرض ساري لمدة 7 أيام من تاريخ إصداره ما لم يُؤكد الحجز رسمياً.",
+      ];
 
   const quotation: CustomerFacingQuotation = {
+    documentLanguage: params.documentLanguage || "ar",
     referenceNumber: referenceNumber || `MTH-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
     issueDate: issueDate || new Date().toISOString().split("T")[0],
-    agencyName: agencyName || "Mathaba Umrah Services",
+    agencyName: agencyName || (isFr ? "Agence Mathaba Voyages" : "وكالة مَثابة لأسفار العمرة"),
     agencyPhone: agencyPhone || null,
     agencyEmail: agencyEmail || null,
     agencyAddress: agencyAddress || null,
@@ -128,18 +139,23 @@ export function projectCustomerFacingQuotation(
     flightDetails,
     transportServices: transportServices || [
       {
-        routeName: "حافلات حديثة ومكيفة لكامل مسار الرحلة",
+        routeName: isFr ? "Autocars modernes et climatisés pour tout le circuit" : "حافلات حديثة ومكيفة لكامل مسار الرحلة",
         isPrivate: false,
-        description: "تنقلات جماعية مريحة ومكيفة تشمل المزارات الدينية",
+        description: isFr ? "Transferts de groupe confortables incluant les Mazarat" : "تنقلات جماعية مريحة ومكيفة تشمل المزارات الدينية",
       },
     ],
     trainJourneys,
-    includedServices: includedServices ? [...includedServices] : [
+    includedServices: includedServices ? [...includedServices] : (isFr ? [
+      "Visa électronique Omra et assurance médicale complète",
+      "Hébergement hôtelier sélectionné à La Mecque et Médine",
+      "Visites religieuses et historiques (Mazarat) avec accompagnement",
+      "Kit du pèlerin et bidon de 5L d'eau de Zamzam bénie",
+    ] : [
       "تأشيرة العمرة الإلكترونية والتأمين الطبي الشامل",
       "الإقامة الفندقية المختارة بمكة المكرمة والمدينة المنورة",
       "المزارات الدينية المعتمدة بإشراف مرشدين مؤهلين",
       "حقيبة هدايا المعتمر ومياه زمزم المباركة",
-    ],
+    ]),
     customizationDescriptions,
     finalSellingPriceMad: sellingPrice,
     currency: "MAD",
@@ -150,6 +166,8 @@ export function projectCustomerFacingQuotation(
 }
 
 export interface BuildInternalReportParams {
+  documentLanguage?: "ar" | "fr";
+  includeMargins?: boolean;
   reportReference?: string;
   generationDate?: string;
   isDraft?: boolean;
@@ -262,6 +280,8 @@ export function buildInternalFinancialReportData(
 
   return {
     isConfidential: true,
+    documentLanguage: params.documentLanguage || "ar",
+    includeMargins: params.includeMargins ?? false,
     reportReference: params.reportReference || `MTH-AUDIT-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
     generationDate: params.generationDate || new Date().toISOString().split("T")[0],
     isDraft: params.isDraft ?? false,
@@ -290,6 +310,7 @@ export function buildInternalFinancialReportData(
 }
 
 export const CUSTOMER_QUOTATION_ALLOWLIST_KEYS = new Set<string>([
+  "documentLanguage",
   "referenceNumber",
   "issueDate",
   "agencyName",

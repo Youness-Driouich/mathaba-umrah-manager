@@ -11,6 +11,9 @@ import {
   ExternalLink,
   Eye,
   Check,
+  Languages,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 import { RoomCategory } from "@prisma/client";
 
@@ -51,6 +54,8 @@ export function DocumentViewerModal({
   const resolvedRoomCategory = defaultRoomCategory || initialRoomCategory || RoomCategory.DOUBLE;
 
   const [docType, setDocType] = useState<"quotation" | "internal-report">(normalizedDocType);
+  const [docLanguage, setDocLanguage] = useState<"ar" | "fr">("ar");
+  const [includeMargins, setIncludeMargins] = useState<boolean>(false); // default: false for shareable cost statements!
   const [roomCategory, setRoomCategory] = useState<RoomCategory>(resolvedRoomCategory);
   const [htmlContent, setHtmlContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -62,7 +67,11 @@ export function DocumentViewerModal({
   const getEndpoint = (format: "html" | "pdf" | "json") => {
     const base = resolvedEntityType === "offer" ? `/api/documents/offers/${resolvedEntityId}` : `/api/documents/quotes/${resolvedEntityId}`;
     const docPath = docType === "quotation" ? "quotation" : "internal-report";
-    const params = new URLSearchParams({ format });
+    const params = new URLSearchParams({
+      format,
+      lang: docLanguage,
+      includeMargins: includeMargins ? "true" : "false",
+    });
     if (resolvedEntityType === "offer") {
       params.set("roomCategory", roomCategory);
     }
@@ -89,11 +98,12 @@ export function DocumentViewerModal({
   };
 
   useEffect(() => {
-    if (isOpen && entityId) {
+    if (isOpen && resolvedEntityId) {
       fetchDocumentHtml();
     }
-  }, [isOpen, entityId, docType, roomCategory]);
+  }, [isOpen, resolvedEntityId, docType, roomCategory, docLanguage, includeMargins]);
 
+  // High-fidelity native browser print-to-PDF
   const handlePrint = () => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.focus();
@@ -111,23 +121,44 @@ export function DocumentViewerModal({
     try {
       setDownloadingPdf(true);
       const pdfUrl = getEndpoint("pdf");
+      const res = await fetch(pdfUrl);
+
+      // If serverless returned PDF fallback (or direct HTML due to missing Chromium)
+      if (res.headers.get("X-Pdf-Fallback") || res.headers.get("content-type")?.includes("text/html")) {
+        // Instant browser print dialog
+        handlePrint();
+        return;
+      }
+
+      if (!res.ok) {
+        // Fallback to direct print
+        handlePrint();
+        return;
+      }
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = pdfUrl;
+      link.href = blobUrl;
       link.setAttribute(
         "download",
-        `Mathaba-${docType === "quotation" ? "Quotation" : "InternalReport"}-${pilgrimName || offerName || "document"}.pdf`
+        `Mathaba-${docType === "quotation" ? (docLanguage === "fr" ? "Devis" : "Quotation") : (docLanguage === "fr" ? "Etat-Couts" : "InternalReport")}-${(pilgrimName || offerName || "document").replace(/\s+/g, "-")}.pdf`
       );
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
     } catch (e) {
-      console.error(e);
+      console.warn("Direct PDF download fell back to browser print:", e);
+      handlePrint();
     } finally {
       setDownloadingPdf(false);
     }
   };
 
   if (!isOpen) return null;
+
+  const isFr = docLanguage === "fr";
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-150">
@@ -141,21 +172,31 @@ export function DocumentViewerModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-sm tracking-wide">
-                  {docType === "quotation" ? "معاينة عرض السعر (Customer Quotation)" : "التقرير المالي الداخلي (Confidential Internal Audit)"}
+                  {docType === "quotation"
+                    ? (isFr ? "Devis Voyage Omra (Customer Quotation)" : "عرض سعر العمرة للمعتمر")
+                    : (isFr
+                        ? (includeMargins ? "État des Coûts & Marges (Audit)" : "État Détaillé des Coûts (Fournisseurs)")
+                        : (includeMargins ? "بيان التكلفة والتدقيق المالي الشامل" : "بيان التكلفة للموردين والتنفيذ")
+                      )
+                  }
                 </h3>
                 {docType === "internal-report" && (
-                  <span className="text-[10px] bg-rose-500/30 text-rose-300 border border-rose-500/50 px-2 py-0.5 rounded-full font-bold">
-                    سري للغاية
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                    includeMargins
+                      ? "bg-rose-500/30 text-rose-300 border-rose-500/50"
+                      : "bg-emerald-500/30 text-emerald-300 border-emerald-500/50"
+                  }`}>
+                    {includeMargins ? (isFr ? "Confidentiel Marges" : "سري للغاية") : (isFr ? "Partageable" : "بيان معتمد")}
                   </span>
                 )}
               </div>
               <p className="text-[11px] text-slate-400">
-                {pilgrimName ? `المعتمر: ${pilgrimName}` : offerName ? `الباقة: ${offerName}` : ""}
+                {pilgrimName ? `${isFr ? "Pèlerin" : "المعتمر"}: ${pilgrimName}` : offerName ? `${isFr ? "Forfait" : "الباقة"}: ${offerName}` : ""}
               </p>
             </div>
           </div>
 
-          {/* Controls: Doc Type Switcher & Actions */}
+          {/* Controls: Doc Type Switcher, Language Toggle, Margins Option & Actions */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Document Type Tabs */}
             <div className="flex bg-slate-800 p-0.5 rounded-xl border border-slate-700 text-xs font-semibold">
@@ -167,7 +208,7 @@ export function DocumentViewerModal({
                     : "text-slate-300 hover:text-white"
                 }`}
               >
-                عرض السعر للمعتمر
+                {isFr ? "Devis Client" : "عرض السعر"}
               </button>
               <button
                 onClick={() => setDocType("internal-report")}
@@ -177,33 +218,77 @@ export function DocumentViewerModal({
                     : "text-slate-300 hover:text-white"
                 }`}
               >
-                التقرير المالي الداخلي
+                {isFr ? "État des Coûts" : "بيان التكلفة"}
               </button>
             </div>
 
+            {/* Language Switcher Pill */}
+            <div className="flex bg-slate-800 p-0.5 rounded-xl border border-slate-700 text-xs font-semibold">
+              <button
+                onClick={() => setDocLanguage("ar")}
+                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                  docLanguage === "ar"
+                    ? "bg-amber-600 text-white font-bold"
+                    : "text-slate-300 hover:text-white"
+                }`}
+                title="العرض باللغة العربية (RTL)"
+              >
+                العربية
+              </button>
+              <button
+                onClick={() => setDocLanguage("fr")}
+                className={`px-2.5 py-1 rounded-lg transition-colors cursor-pointer ${
+                  docLanguage === "fr"
+                    ? "bg-amber-600 text-white font-bold"
+                    : "text-slate-300 hover:text-white"
+                }`}
+                title="Afficher en Français (LTR)"
+              >
+                Français
+              </button>
+            </div>
+
+            {/* Margins Toggle (for Internal Cost Statement only) */}
+            {docType === "internal-report" && (
+              <button
+                onClick={() => setIncludeMargins(!includeMargins)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-colors cursor-pointer ${
+                  includeMargins
+                    ? "bg-rose-950/80 text-rose-300 border-rose-700 hover:bg-rose-900"
+                    : "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-750"
+                }`}
+                title={isFr ? "Activer/désactiver l'affichage des marges et prix de vente" : "تضمين أو إخفاء هوامش الربح وأسعار البيع في بيان التكلفة"}
+              >
+                {includeMargins ? <ToggleRight className="w-4 h-4 text-rose-400" /> : <ToggleLeft className="w-4 h-4 text-slate-400" />}
+                <span className="hidden sm:inline">
+                  {includeMargins ? (isFr ? "Marges incluses" : "الهوامش ظاهرة") : (isFr ? "Marges masquées" : "الهوامش مخفية")}
+                </span>
+              </button>
+            )}
+
             {/* Room category picker for offer */}
-            {entityType === "offer" && (
+            {resolvedEntityType === "offer" && (
               <select
                 value={roomCategory}
                 onChange={(e) => setRoomCategory(e.target.value as RoomCategory)}
                 className="px-2.5 py-1.5 text-xs font-semibold rounded-lg bg-slate-800 text-slate-200 border border-slate-700 focus:outline-hidden"
               >
-                <option value={RoomCategory.DOUBLE}>ثنائية (2)</option>
-                <option value={RoomCategory.SINGLE}>فردية (1)</option>
-                <option value={RoomCategory.TRIPLE}>ثلاثية (3)</option>
-                <option value={RoomCategory.QUAD}>رباعية (4)</option>
+                <option value={RoomCategory.DOUBLE}>{isFr ? "Double (2)" : "ثنائية (2)"}</option>
+                <option value={RoomCategory.SINGLE}>{isFr ? "Individuelle (1)" : "فردية (1)"}</option>
+                <option value={RoomCategory.TRIPLE}>{isFr ? "Triple (3)" : "ثلاثية (3)"}</option>
+                <option value={RoomCategory.QUAD}>{isFr ? "Quadruple (4)" : "رباعية (4)"}</option>
               </select>
             )}
 
-            {/* Print Button */}
+            {/* Native High-Fidelity Browser Print Button (Zero-Failure Netlify Free PDF) */}
             <button
               onClick={handlePrint}
               disabled={loading}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold rounded-lg border border-slate-700 transition-colors cursor-pointer disabled:opacity-50"
-              title="طباعة الوثيقة (A4)"
+              title={isFr ? "Imprimer ou enregistrer en PDF (A4)" : "طباعة أو حفظ كملف PDF عالي الدقة (A4)"}
             >
               <Printer className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">طباعة</span>
+              <span>{isFr ? "Imprimer / PDF" : "طباعة / PDF"}</span>
             </button>
 
             {/* Download PDF Button */}
@@ -211,14 +296,14 @@ export function DocumentViewerModal({
               onClick={handleDownloadPdf}
               disabled={loading || downloadingPdf}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-xs transition-colors cursor-pointer disabled:opacity-50"
-              title="تحميل كملف PDF رسمي"
+              title={isFr ? "Télécharger le document" : "تحميل المستند"}
             >
               {downloadingPdf ? (
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <Download className="w-3.5 h-3.5" />
               )}
-              <span>تحميل PDF</span>
+              <span className="hidden sm:inline">{isFr ? "Télécharger" : "تحميل"}</span>
             </button>
 
             {/* Close Button */}
@@ -236,23 +321,29 @@ export function DocumentViewerModal({
           {loading ? (
             <div className="flex flex-col items-center justify-center p-16 text-slate-500">
               <RefreshCw className="w-8 h-8 animate-spin text-emerald-600 mb-2" />
-              <p className="text-xs font-semibold">جاري إعداد ومعالجة الوثيقة الرسمية...</p>
+              <p className="text-xs font-semibold">
+                {isFr ? "Préparation du document officiel en cours..." : "جاري إعداد ومعالجة الوثيقة الرسمية..."}
+              </p>
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center p-12 text-rose-600 max-w-md text-center">
+            <div className="flex flex-col items-center justify-center p-16 text-rose-600 text-center max-w-md">
               <ShieldAlert className="w-10 h-10 mb-2" />
-              <p className="font-bold text-sm">تعذر عرض الوثيقة</p>
-              <p className="text-xs text-slate-500 mt-1">{error}</p>
+              <p className="font-bold text-sm mb-1">{isFr ? "Erreur de chargement" : "خطأ أثناء تحميل المستند"}</p>
+              <p className="text-xs text-slate-500">{error}</p>
+              <button
+                onClick={fetchDocumentHtml}
+                className="mt-4 px-4 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg hover:bg-slate-800"
+              >
+                {isFr ? "Réessayer" : "إعادة المحاولة"}
+              </button>
             </div>
           ) : (
-            <div className="w-full max-w-[210mm] bg-white rounded-xl shadow-lg border border-slate-300 overflow-hidden min-h-[297mm]">
-              <iframe
-                ref={iframeRef}
-                srcDoc={htmlContent}
-                title="Document Preview"
-                className="w-full h-[85vh] border-0"
-              />
-            </div>
+            <iframe
+              ref={iframeRef}
+              srcDoc={htmlContent}
+              title="A4 Document Preview"
+              className="w-full max-w-[210mm] min-h-[297mm] bg-white rounded-lg shadow-lg border border-slate-300"
+            />
           )}
         </div>
       </div>
