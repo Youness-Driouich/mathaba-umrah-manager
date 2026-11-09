@@ -23,6 +23,7 @@ async function main() {
     update: {
       role: Role.ADMIN,
       name: process.env.INITIAL_ADMIN_NAME || "Mathaba Agency Director",
+      passwordHash,
       isActive: true,
     },
     create: {

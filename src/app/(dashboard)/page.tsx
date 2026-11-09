@@ -217,17 +217,17 @@ export default function DashboardPage() {
           </span>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4" suppressHydrationWarning>
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200" suppressHydrationWarning>
             <div className="text-xs text-slate-500 uppercase font-semibold">
               {language === "ar" ? "إقامة ثنائية (10 ليالٍ)" : "Hotel Double Room (10 Nights)"}
             </div>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-lg font-extrabold text-slate-900">
-                {doubleRoomCalc.perPersonCostSar.DOUBLE.toNumber().toLocaleString()} {t("currencySar")}
+            <div className="mt-1 flex items-baseline justify-between" suppressHydrationWarning>
+              <span className="text-lg font-extrabold text-slate-900" suppressHydrationWarning>
+                {doubleRoomCalc.perPersonCostSar.DOUBLE.toNumber().toLocaleString("en-US")} {t("currencySar")}
               </span>
-              <span className="text-xs text-emerald-700 font-semibold">
-                {doubleRoomCalc.perPersonCostMad.DOUBLE.toNumber().toLocaleString()} {t("currencyMad")}
+              <span className="text-xs text-emerald-700 font-semibold" suppressHydrationWarning>
+                {doubleRoomCalc.perPersonCostMad.DOUBLE.toNumber().toLocaleString("en-US")} {t("currencyMad")}
               </span>
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -235,13 +235,13 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200" suppressHydrationWarning>
             <div className="text-xs text-slate-500 uppercase font-semibold">
               {language === "ar" ? "نصيب الفرد من الحافلة" : "Group Bus Allocation"}
             </div>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-lg font-extrabold text-slate-900">
-                {busAlloc.toNumber()} {t("currencySar")}
+            <div className="mt-1 flex items-baseline justify-between" suppressHydrationWarning>
+              <span className="text-lg font-extrabold text-slate-900" suppressHydrationWarning>
+                {busAlloc.toNumber().toLocaleString("en-US")} {t("currencySar")}
               </span>
               <span className="text-xs text-slate-500">/{t("pax")}</span>
             </div>
@@ -250,13 +250,13 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200" suppressHydrationWarning>
             <div className="text-xs text-slate-500 uppercase font-semibold">
               {language === "ar" ? "صافي الربح بعد الخصم" : "Net Profit After Discount"}
             </div>
-            <div className="mt-1 flex items-baseline justify-between">
-              <span className="text-lg font-extrabold text-emerald-700">
-                +{sampleProfitCalc.netProfitMad.toNumber().toLocaleString()} {t("currencyMad")}
+            <div className="mt-1 flex items-baseline justify-between" suppressHydrationWarning>
+              <span className="text-lg font-extrabold text-emerald-700" suppressHydrationWarning>
+                +{sampleProfitCalc.netProfitMad.toNumber().toLocaleString("en-US")} {t("currencyMad")}
               </span>
               <span className="text-xs text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold">
                 -500 {t("currencyMad")}

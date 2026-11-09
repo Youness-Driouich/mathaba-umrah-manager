@@ -211,8 +211,8 @@ export default function CentralQuotesPage() {
           <span className="text-[11px] font-semibold text-slate-400 uppercase">
             {language === "ar" ? "إجمالي مبيعات العروض المعتمدة" : "Confirmed Revenue"}
           </span>
-          <div className="text-2xl font-black text-blue-700 mt-1">
-            {totalCustomRevenue.toLocaleString()} <span className="text-xs font-normal">{t("currencyMad")}</span>
+          <div className="text-2xl font-black text-blue-700 mt-1" suppressHydrationWarning>
+            {totalCustomRevenue.toLocaleString("en-US")} <span className="text-xs font-normal">{t("currencyMad")}</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
             {language === "ar" ? "مبيعات البيع النهائي للمعتمرين" : "Gross retail revenue"}
@@ -223,8 +223,8 @@ export default function CentralQuotesPage() {
           <span className="text-[11px] font-semibold text-slate-400 uppercase">
             {language === "ar" ? "صافي أرباح العروض المعتمدة" : "Confirmed Net Profit"}
           </span>
-          <div className="text-2xl font-black text-emerald-600 mt-1">
-            {totalCustomProfit.toLocaleString()} <span className="text-xs font-normal">{t("currencyMad")}</span>
+          <div className="text-2xl font-black text-emerald-600 mt-1" suppressHydrationWarning>
+            {totalCustomProfit.toLocaleString("en-US")} <span className="text-xs font-normal">{t("currencyMad")}</span>
           </div>
           <div className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
             <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
