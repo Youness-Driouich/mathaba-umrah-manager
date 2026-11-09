@@ -42,10 +42,10 @@ interface TripItem {
 }
 
 const STATUS_BADGES: Record<TripStatus, { label: string; className: string }> = {
-  DRAFT: { label: "Draft", className: "bg-slate-100 text-slate-700 border-slate-200" },
-  ACTIVE: { label: "Active", className: "bg-emerald-100 text-emerald-800 border-emerald-300" },
-  FINALIZED: { label: "Finalized", className: "bg-blue-100 text-blue-800 border-blue-300" },
-  ARCHIVED: { label: "Archived", className: "bg-amber-100 text-amber-800 border-amber-300" },
+  DRAFT: { label: "مسودة", className: "bg-slate-100 text-slate-700 border-slate-200" },
+  ACTIVE: { label: "نشطة", className: "bg-emerald-100 text-emerald-800 border-emerald-300" },
+  FINALIZED: { label: "معتمدة", className: "bg-blue-100 text-blue-800 border-blue-300" },
+  ARCHIVED: { label: "مؤرشفة", className: "bg-amber-100 text-amber-800 border-amber-300" },
 };
 
 export default function TripsDirectoryPage() {

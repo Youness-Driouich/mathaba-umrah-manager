@@ -23,10 +23,10 @@ export function Sidebar() {
   const navigationItems = [
     { name: t("navDashboard"), href: "/", icon: LayoutDashboard },
     { name: t("navTrips"), href: "/trips", icon: Compass },
-    { name: t("navTransport"), href: "/transport-catalog", icon: Bus },
     { name: t("navOffers"), href: "/offers", icon: Layers },
-    { name: t("navQuotes"), href: "/quotes", icon: Users, badge: "Phase 5" },
-    { name: t("navReports"), href: "/reports", icon: FileSpreadsheet, badge: "Phase 6" },
+    { name: t("navQuotes"), href: "/quotes", icon: Users },
+    { name: t("navTransport"), href: "/transport-catalog", icon: Bus },
+    { name: t("navReports"), href: "/reports", icon: FileSpreadsheet },
     { name: t("navSettings"), href: "/settings", icon: Settings },
   ];
 

@@ -1,292 +1,437 @@
 "use client";
 
-import {
-  Calculator,
-  ShieldCheck,
-  Database,
-  Smartphone,
-  CheckCircle2,
-  ArrowRight,
-  TrendingUp,
-  Building2,
-  Bus,
-  Coins,
-  Compass,
-  Layers,
-  Settings,
-  Globe,
-} from "lucide-react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
-  calculateHotelStay,
-  allocateTransportation,
-  calculateIndividualQuote,
-} from "@/core/finance/calculator";
-import Decimal from "decimal.js";
+  Compass,
+  Plus,
+  Layers,
+  Users,
+  Bus,
+  FileText,
+  FileSpreadsheet,
+  CheckCircle2,
+  Calendar,
+  Building2,
+  Plane,
+  Coins,
+  ArrowLeft,
+  Settings,
+  Printer,
+  Sparkles,
+} from "lucide-react";
 import { useLanguage } from "@/lib/i18n/language-context";
+import { DocumentViewerModal } from "@/components/documents/document-viewer-modal";
+
+interface TripSummary {
+  id: string;
+  name: string;
+  startDate: string;
+  endDate: string;
+  expectedPilgrims: number;
+  airlineName?: string | null;
+  status: string;
+  offersCount: number;
+}
+
+interface OfferSummary {
+  id: string;
+  name: string;
+  tripName?: string;
+  pricingSummary?: {
+    quadMad: number | string;
+    doubleMad: number | string;
+  };
+}
+
+interface QuoteSummary {
+  id: string;
+  pilgrimName: string;
+  tripName: string;
+  offerName: string;
+  roomCategory: string;
+  calculation?: {
+    finalSellingPriceMad: number;
+    newActualCostMad: number;
+    realizedProfitMad: number;
+  };
+}
 
 export default function DashboardPage() {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
+  const [trips, setTrips] = useState<TripSummary[]>([]);
+  const [offers, setOffers] = useState<OfferSummary[]>([]);
+  const [quotes, setQuotes] = useState<QuoteSummary[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Execute live calculation engine validations for the dashboard verification widget
-  const sampleRates = { sarToMad: 2.7, eurToMad: 10.85 };
+  // Document modal for direct preview from dashboard
+  const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
+  const [selectedPilgrimName, setSelectedPilgrimName] = useState<string>("");
 
-  // Double room 1000 SAR x 10 nights / 2
-  const doubleRoomCalc = calculateHotelStay(
-    {
-      hotelName: "Swissôtel Al Maqam Makkah",
-      city: "MAKKAH",
-      checkInDate: "2026-12-15",
-      checkOutDate: "2026-12-25",
-      singleDoubleNightlyRateSar: 1000,
-      tripleNightlyRateSar: 1200,
-      quadNightlyRateSar: 1500,
-    },
-    sampleRates
-  );
+  useEffect(() => {
+    async function loadDashboardData() {
+      try {
+        setLoading(true);
+        const [tripsRes, offersRes, quotesRes] = await Promise.all([
+          fetch("/api/trips").then((r) => (r.ok ? r.json() : { trips: [] })),
+          fetch("/api/offers").then((r) => (r.ok ? r.json() : { offers: [] })),
+          fetch("/api/quotes").then((r) => (r.ok ? r.json() : { quotes: [] })),
+        ]);
 
-  // Bus 4400 SAR / 40 pilgrims
-  const busAlloc = allocateTransportation(4400, 40);
+        if (tripsRes.trips) setTrips(tripsRes.trips);
+        if (offersRes.offers) setOffers(offersRes.offers);
+        if (quotesRes.quotes) setQuotes(quotesRes.quotes);
+      } catch (e) {
+        console.error("Failed to load dashboard data:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  // Profit 2000 MAD - 500 discount
-  const sampleProfitCalc = calculateIndividualQuote("Mohamed Alami", {
-    baselineBreakdown: {
-      roomCategory: "DOUBLE",
-      occupancy: 2,
-      hotelCostMad: new Decimal(13500),
-      flightCostMad: new Decimal(8000),
-      transportCostMad: new Decimal(297),
-      groupBusCostMad: new Decimal(297),
-      additionalTransportCostMad: new Decimal(0),
-      trainCostMad: new Decimal(0),
-      visaCostMad: new Decimal(1417.5),
-      servicesCostMad: new Decimal(0),
-      totalActualCostMad: new Decimal(23214.5),
-      configuredProfitMad: new Decimal(2000),
-      sellingPriceBeforeDiscountMad: new Decimal(25214.5),
-      discountMad: new Decimal(0),
-      finalSellingPriceMad: new Decimal(25214.5),
-      effectiveProfitMad: new Decimal(2000),
-      isDeficit: false,
-    },
-    commercialDiscountMad: 500,
-  });
+    loadDashboardData();
+  }, []);
+
+  const formatDate = (isoString?: string) => {
+    if (!isoString) return "";
+    return new Date(isoString).toLocaleDateString("ar-MA", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
+  const roomCategoryLabel = (cat: string) => {
+    switch (cat) {
+      case "SINGLE":
+        return "غرفة فردية";
+      case "DOUBLE":
+        return "غرفة ثنائية";
+      case "TRIPLE":
+        return "غرفة ثلاثية";
+      case "QUAD":
+        return "غرفة رباعية";
+      default:
+        return cat;
+    }
+  };
 
   return (
-    <div className="space-y-8">
-      {/* Welcome Banner */}
+    <div className="space-y-8" dir="rtl">
+      {/* 1. Welcome & Primary Quick Actions */}
       <div className="bg-gradient-to-r from-emerald-900 via-emerald-800 to-emerald-950 text-white p-6 md:p-8 rounded-2xl shadow-sm relative overflow-hidden">
         <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-xs font-semibold mb-4">
-            <CheckCircle2 className="w-3.5 h-3.5" />{" "}
-            {language === "ar" ? "المرحلة 3: عروض الأسعار وحسابات الفنادق مكتملة" : "Phase 3: Offers & Hotel Pricing Ready"}
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 text-xs font-semibold mb-3">
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>نظام وكالة الأسفار لإدارة وحسابات رحلات العمرة</span>
           </div>
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            {t("appName")}
+
+          <h1 className="text-2xl md:text-3xl font-black tracking-tight">
+            مرحباً بك في منصة مَثابة
           </h1>
           <p className="mt-2 text-sm md:text-base text-emerald-100/90 leading-relaxed">
-            {t("appSubname")}
+            المنصة الموحدة لحساب تكاليف الفنادق والطيران، ضبط أرباح الباقات، وإصدار عروض الأسعار الرسمية وبيانات التكلفة بنقرة زر واحدة.
           </p>
 
+          {/* Big Intuitive Action Buttons */}
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
               href="/trips"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-all shadow-xs"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs md:text-sm font-bold rounded-xl transition-all shadow-xs cursor-pointer"
             >
               <Compass className="w-4 h-4" />
-              <span>{t("navTrips")}</span>
+              <span>إدارة رحلات العمرة</span>
             </Link>
+
             <Link
-              href="/offers"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl backdrop-blur-xs transition-all"
+              href="/quotes"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs md:text-sm font-bold rounded-xl backdrop-blur-xs transition-all cursor-pointer border border-white/10"
             >
-              <Layers className="w-4 h-4" />
-              <span>{t("navOffers")}</span>
+              <Users className="w-4 h-4" />
+              <span>عروض أسعار المعتمرين</span>
             </Link>
+
             <Link
               href="/transport-catalog"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded-xl backdrop-blur-xs transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white text-xs md:text-sm font-bold rounded-xl backdrop-blur-xs transition-all cursor-pointer border border-white/10"
             >
               <Bus className="w-4 h-4" />
-              <span>{t("navTransport")}</span>
+              <span>دليل أسعار النقل (66 مسار)</span>
             </Link>
           </div>
         </div>
-        <div className="absolute right-0 bottom-0 opacity-10 pointer-events-none transform translate-x-10 translate-y-10 rtl:right-auto rtl:left-0 rtl:-translate-x-10">
+
+        <div className="absolute left-0 bottom-0 opacity-10 pointer-events-none transform -translate-x-10 translate-y-10">
           <Building2 className="w-80 h-80 text-white" />
         </div>
       </div>
 
-      {/* Core Architectural Pillars */}
-      <div>
-        <h2 className="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-emerald-600" />
-          <span>
-            {language === "ar" ? "الركائز المعمارية المنجزة" : "Core Architectural Milestones"}
-          </span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3">
-              <Calculator className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-sm text-slate-900">
-              {language === "ar" ? "محرك مالي فائق الدقة" : "Decimal-Safe Math Engine"}
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              {language === "ar"
-                ? "حسابات خالية من أخطاء الفاصلة العائمة باستخدام Decimal.js مع 15 اختبار وحدة مؤتمت."
-                : "Zero floating-point rounding errors using Decimal.js with 15 passing automated unit tests."}
-            </p>
-            <div className="mt-3 text-[11px] font-semibold text-emerald-700 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> 100% Tests Passing
-            </div>
+      {/* 2. Key Live Stats (Simplified KPI Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link
+          href="/trips"
+          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-emerald-500 transition-all shadow-xs group cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <Compass className="w-5 h-5" />
           </div>
+          <span className="text-xs font-semibold text-slate-500">رحلات العمرة الحالية</span>
+          <div className="text-2xl font-black text-slate-900 mt-1">
+            {loading ? "..." : trips.length}
+          </div>
+          <div className="text-[11px] text-emerald-700 font-medium mt-1 flex items-center gap-1">
+            <span>عرض كل الرحلات</span>
+            <ArrowLeft className="w-3 h-3" />
+          </div>
+        </Link>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center mb-3">
-              <Database className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-sm text-slate-900">Neon Cloud PostgreSQL</h3>
-            <p className="text-xs text-slate-500 mt-1">
-              {language === "ar"
-                ? "قاعدة بيانات سحابية دائمة بدون إيقاف تلقائي، ومحمية بترحيل Prisma ORM."
-                : "Serverless PostgreSQL with zero inactivity archiving, Prisma ORM, and connection pooling."}
-            </p>
-            <div className="mt-3 text-[11px] font-semibold text-blue-700 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Neon Live & Persistent
-            </div>
+        <Link
+          href="/offers"
+          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-emerald-500 transition-all shadow-xs group cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <Layers className="w-5 h-5" />
           </div>
+          <span className="text-xs font-semibold text-slate-500">باقات وعروض الفنادق</span>
+          <div className="text-2xl font-black text-slate-900 mt-1">
+            {loading ? "..." : offers.length}
+          </div>
+          <div className="text-[11px] text-blue-700 font-medium mt-1 flex items-center gap-1">
+            <span>مصفوفة أسعار الغرف</span>
+            <ArrowLeft className="w-3 h-3" />
+          </div>
+        </Link>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mb-3">
-              <Bus className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-sm text-slate-900">
-              {language === "ar" ? "دليل النقل (66 سعراً معتمداً)" : "66 Transport Price Points"}
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              {language === "ar"
-                ? "المسارات المعيارية الـ 10 + أجور الانتظار لـ 6 فئات مركبات شاملة VAT 15%."
-                : "10 canonical supplier routes + waiting charges across 6 vehicle types with 15% VAT."}
-            </p>
-            <div className="mt-3 text-[11px] font-semibold text-purple-700 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Supplier Catalog Seeded
-            </div>
+        <Link
+          href="/quotes"
+          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-emerald-500 transition-all shadow-xs group cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <Users className="w-5 h-5" />
           </div>
+          <span className="text-xs font-semibold text-slate-500">عروض المعتمرين الفردية</span>
+          <div className="text-2xl font-black text-slate-900 mt-1">
+            {loading ? "..." : quotes.length}
+          </div>
+          <div className="text-[11px] text-purple-700 font-medium mt-1 flex items-center gap-1">
+            <span>العروض والترقيات الخاصة</span>
+            <ArrowLeft className="w-3 h-3" />
+          </div>
+        </Link>
 
-          <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mb-3">
-              <Globe className="w-5 h-5" />
-            </div>
-            <h3 className="font-bold text-sm text-slate-900">
-              {language === "ar" ? "واجهة ثنائية اللغة RTL / LTR" : "Bilingual i18n RTL/LTR"}
-            </h3>
-            <p className="text-xs text-slate-500 mt-1">
-              {language === "ar"
-                ? "اللغة العربية هي الافتراضية مع دعم كامل للتبديل الفوري للغة الإنجليزية وحفظ التفضيل."
-                : "Primary Arabic (RTL) interface with seamless one-click switch to English (LTR)."}
-            </p>
-            <div className="mt-3 text-[11px] font-semibold text-amber-700 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Arabic & English Active
-            </div>
+        <Link
+          href="/transport-catalog"
+          className="bg-white p-5 rounded-2xl border border-slate-200 hover:border-emerald-500 transition-all shadow-xs group cursor-pointer"
+        >
+          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+            <Bus className="w-5 h-5" />
           </div>
-        </div>
+          <span className="text-xs font-semibold text-slate-500">دليل النقل والسيارات</span>
+          <div className="text-2xl font-black text-slate-900 mt-1">66</div>
+          <div className="text-[11px] text-amber-700 font-medium mt-1 flex items-center gap-1">
+            <span>تسعيرة الموردين المعتمدة</span>
+            <ArrowLeft className="w-3 h-3" />
+          </div>
+        </Link>
       </div>
 
-      {/* Live Calculation Engine Health-Check */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
+      {/* 3. Active Umrah Trips Overview */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-base text-slate-900 flex items-center gap-2">
-              <Coins className="w-4 h-4 text-emerald-600" />
-              <span>
-                {language === "ar"
-                  ? "التحقق المالي المباشر لمحرك الحسابات"
-                  : "Live Engine Financial Verification"}
-              </span>
-            </h3>
-            <p className="text-xs text-slate-500">
-              {language === "ar"
-                ? "يتم تقييم النتائج الحسابية مباشرة عبر النواة المالية بالريال والدرهم."
-                : "Evaluated directly by the core calculation engine in real-time."}
+            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Compass className="w-5 h-5 text-emerald-600" />
+              <span>رحلات العمرة المفتوحة حالياً</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              قائمة الرحلات المجدولة والمسجلة في قاعدة البيانات
             </p>
           </div>
-          <span className="text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full self-start sm:self-auto">
-            {language === "ar" ? "حسابات دقيقة 100%" : "Live Math Verified"}
-          </span>
+          <Link
+            href="/trips"
+            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+          >
+            <span>عرض كل الرحلات</span>
+            <ArrowLeft className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4" suppressHydrationWarning>
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200" suppressHydrationWarning>
-            <div className="text-xs text-slate-500 uppercase font-semibold">
-              {language === "ar" ? "إقامة ثنائية (10 ليالٍ)" : "Hotel Double Room (10 Nights)"}
+        {loading ? (
+          <div className="p-8 text-center text-slate-400 text-sm font-medium">
+            جاري تحميل الرحلات...
+          </div>
+        ) : trips.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 text-sm">
+            لا توجد رحلات حالياً. اضغط على "إدارة رحلات العمرة" لإضافة أول رحلة.
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {trips.map((trip) => (
+              <div
+                key={trip.id}
+                className="p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-slate-900 text-base">
+                      {trip.name}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                      {trip.status === "DRAFT" ? "مسودة عمل" : "رحلة معتمدة"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{formatDate(trip.startDate)} ➔ {formatDate(trip.endDate)}</span>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3.5 h-3.5 text-slate-400" />
+                      <span>الفوج: <strong>{trip.expectedPilgrims} معتمر</strong></span>
+                    </span>
+                    {trip.airlineName && (
+                      <span className="flex items-center gap-1">
+                        <Plane className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{trip.airlineName}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Link
+                    href={`/trips/${trip.id}`}
+                    className="px-3.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold rounded-lg border border-emerald-200 transition-colors"
+                  >
+                    فتح الرحلة والأسعار
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* 4. Recent Pilgrim Quotations */}
+      {quotes.length > 0 && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
+          <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-purple-600" />
+                <span>أحدث عروض الأسعار للمعتمرين</span>
+              </h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                عروض أسعار مخصصة مع إمكانية المعاينة والطباعة الفورية
+              </p>
             </div>
-            <div className="mt-1 flex items-baseline justify-between" suppressHydrationWarning>
-              <span className="text-lg font-extrabold text-slate-900" suppressHydrationWarning>
-                {doubleRoomCalc.perPersonCostSar.DOUBLE.toNumber().toLocaleString("en-US")} {t("currencySar")}
-              </span>
-              <span className="text-xs text-emerald-700 font-semibold" suppressHydrationWarning>
-                {doubleRoomCalc.perPersonCostMad.DOUBLE.toNumber().toLocaleString("en-US")} {t("currencyMad")}
-              </span>
+            <Link
+              href="/quotes"
+              className="text-xs font-bold text-purple-700 hover:text-purple-800 flex items-center gap-1"
+            >
+              <span>عرض كل العروض</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          <div className="divide-y divide-slate-100">
+            {quotes.map((q) => (
+              <div
+                key={q.id}
+                className="p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-slate-50/80 transition-colors"
+              >
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-900 text-sm md:text-base">
+                      {q.pilgrimName}
+                    </span>
+                    <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md font-medium">
+                      {roomCategoryLabel(q.roomCategory)}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">
+                    {q.tripName} • {q.offerName}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  {q.calculation && (
+                    <div className="text-left rtl:text-right">
+                      <div className="text-xs text-slate-400">سعر البيع النهائي</div>
+                      <div className="text-base font-black text-emerald-700" suppressHydrationWarning>
+                        {q.calculation.finalSellingPriceMad.toLocaleString("en-US")} د.م.
+                      </div>
+                    </div>
+                  )}
+
+                  <button
+                    onClick={() => {
+                      setSelectedQuoteId(q.id);
+                      setSelectedPilgrimName(q.pilgrimName);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5 text-amber-300" />
+                    <span>معاينة وطباعة</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 5. Simple 3-Step Agency Workflow Guide */}
+      <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-6">
+        <h3 className="font-bold text-sm md:text-base text-emerald-950 flex items-center gap-2 mb-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-700" />
+          <span>طريقة العمل المبسطة في منصة مَثابة (3 خطوات سهلة):</span>
+        </h3>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+          <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-2xs">
+            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center mb-2">
+              1
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              1,000 {t("currencySar")} × 10 {t("nights")} ÷ 2 {t("pax")} = 5,000 {t("currencySar")}
+            <h4 className="font-bold text-sm text-slate-900">أنشئ رحلة العمرة</h4>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              حدد تواريخ الذهاب والعودة، تكلفة تذكرة الطيران، وتكلفة التأشيرة وحافلة المجموعة.
             </p>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200" suppressHydrationWarning>
-            <div className="text-xs text-slate-500 uppercase font-semibold">
-              {language === "ar" ? "نصيب الفرد من الحافلة" : "Group Bus Allocation"}
+          <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-2xs">
+            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center mb-2">
+              2
             </div>
-            <div className="mt-1 flex items-baseline justify-between" suppressHydrationWarning>
-              <span className="text-lg font-extrabold text-slate-900" suppressHydrationWarning>
-                {busAlloc.toNumber().toLocaleString("en-US")} {t("currencySar")}
-              </span>
-              <span className="text-xs text-slate-500">/{t("pax")}</span>
-            </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              4,400 {t("currencySar")} ÷ 40 {t("pax")} = 110 {t("currencySar")}
+            <h4 className="font-bold text-sm text-slate-900">حدد باقات الفنادق والربح</h4>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              اختر فنادق مكة والمدينة وسعر الغرفة لليلة، وحدد هامش الربح المطلوب للوكالة بالدرهم.
             </p>
           </div>
 
-          <div className="p-4 bg-slate-50 rounded-xl border border-slate-200" suppressHydrationWarning>
-            <div className="text-xs text-slate-500 uppercase font-semibold">
-              {language === "ar" ? "صافي الربح بعد الخصم" : "Net Profit After Discount"}
+          <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-2xs">
+            <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-black text-xs flex items-center justify-center mb-2">
+              3
             </div>
-            <div className="mt-1 flex items-baseline justify-between" suppressHydrationWarning>
-              <span className="text-lg font-extrabold text-emerald-700" suppressHydrationWarning>
-                +{sampleProfitCalc.netProfitMad.toNumber().toLocaleString("en-US")} {t("currencyMad")}
-              </span>
-              <span className="text-xs text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded font-bold">
-                -500 {t("currencyMad")}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              2,000 {t("currencyMad")} - 500 {t("currencyMad")} = 1,500 {t("currencyMad")}
+            <h4 className="font-bold text-sm text-slate-900">اطبع عرض السعر فوراً</h4>
+            <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+              اطبع عرض السعر الرسمي للزبون بنقرة واحدة (بالعربية أو الفرنسية) أو بيان التكلفة المفصل للإدارة.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Phase 3 Status Banner */}
-      <div className="p-5 rounded-2xl border border-emerald-200 bg-emerald-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h4 className="font-bold text-sm text-emerald-950">
-            {language === "ar"
-              ? "المرحلة 3 مكتملة — إدارة العروض وتسعير الفنادق ومصفوفة الغرف الأربع جاهزة"
-              : "Phase 3 Complete — Offers, Hotel Pricing & 4-Room Financial Matrix Ready"}
-          </h4>
-          <p className="text-xs text-emerald-800 mt-0.5">
-            {language === "ar"
-              ? "تم ربط باقات الفنادق بحسابات الليالي التلقائية/اليدوية، ومصفوفة الأسعار الصافية والنهائية بهوامش ربح ثابتة."
-              : "Connected hotel packages with auto/manual nights calculation and complete 4-room pricing matrix with fixed MAD profit."}
-          </p>
-        </div>
-        <div className="text-xs text-emerald-800 font-bold bg-white border border-emerald-300 px-3.5 py-1.5 rounded-xl shadow-2xs self-start sm:self-auto">
-          {language === "ar" ? "بانتظار اعتماد المستخدم للمرحلة 4" : "Awaiting User Approval for Phase 4"}
-        </div>
-      </div>
+      {/* Document Viewer Modal for Direct Preview */}
+      {selectedQuoteId && (
+        <DocumentViewerModal
+          isOpen={!!selectedQuoteId}
+          onClose={() => setSelectedQuoteId(null)}
+          entityType="quote"
+          entityId={selectedQuoteId}
+          pilgrimName={selectedPilgrimName}
+          defaultDocType="quotation"
+        />
+      )}
     </div>
   );
 }
