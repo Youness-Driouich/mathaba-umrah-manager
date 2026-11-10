@@ -346,10 +346,8 @@ export default function TripWorkspacePage() {
             <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
               <span className="flex items-center gap-1 font-medium">
                 <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                {start.toLocaleDateString()} ➔ {end.toLocaleDateString()} ({daysDiff} {t("days")})
+                {start.toLocaleDateString("ar-MA")} ➔ {end.toLocaleDateString("ar-MA")} ({daysDiff} {t("days")})
               </span>
-              <span className="text-slate-300">•</span>
-              <span className="font-mono text-[11px] text-slate-400">slug: {trip.slug}</span>
             </div>
           </div>
         </div>
@@ -476,10 +474,10 @@ export default function TripWorkspacePage() {
           </div>
           <div className="mt-2 space-y-0.5">
             <div className="text-sm font-bold text-slate-900">
-              SAR/MAD: <span className="text-emerald-700">{trip.sarToMadRate}</span>
+              الريال: <span className="text-emerald-700">{trip.sarToMadRate} د.م.</span>
             </div>
             <div className="text-sm font-bold text-slate-900">
-              EUR/MAD: <span className="text-emerald-700">{trip.eurToMadRate}</span>
+              اليورو: <span className="text-emerald-700">{trip.eurToMadRate} د.م.</span>
             </div>
             <div className="text-xs font-semibold text-slate-700 pt-0.5">
               {t("visaCostPerPax")}: <span className="text-amber-700 font-bold">{trip.visaCostSar || 525} {t("currencySar")}</span>

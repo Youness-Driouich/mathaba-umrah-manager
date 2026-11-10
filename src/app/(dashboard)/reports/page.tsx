@@ -131,7 +131,7 @@ export default function ReportsHubPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-              {language === "ar" ? "المرحلة السادسة: الوثائق والتقارير المالية" : "Phase 6: Financial Reports & PDF"}
+              {language === "ar" ? "الوثائق والتقارير المالية الرسمية" : "Official Documents & Financial Reports"}
             </span>
             <span className="text-xs text-slate-400">|</span>
             <span className="text-xs font-semibold text-slate-500">

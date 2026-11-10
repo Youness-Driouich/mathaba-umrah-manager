@@ -150,7 +150,7 @@ export default function CentralQuotesPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-              {language === "ar" ? "المرحلة الخامسة: الحالات الاستثنائية" : "Phase 5: Individual Exceptions"}
+              {language === "ar" ? "عروض المعتمرين والحالات الخاصة" : "Individual Quotes & Customizations"}
             </span>
             <span className="text-xs text-slate-400">|</span>
             <span className="text-xs font-semibold text-slate-500">

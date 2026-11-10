@@ -30,7 +30,11 @@ yarn-error.log*
 /public/samples/
 /scratch/
 
-# vercel
+# customer data and spreadsheets
+passengers_list.*
+*.csv
+*.xlsx
+
 .vercel
 
 # typescript

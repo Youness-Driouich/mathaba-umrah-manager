@@ -16,11 +16,18 @@ import {
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/lib/i18n/language-context";
 
+interface NavigationItem {
+  name: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
+}
+
 export function Sidebar() {
   const pathname = usePathname();
   const { t, language } = useLanguage();
 
-  const navigationItems = [
+  const navigationItems: NavigationItem[] = [
     { name: t("navDashboard"), href: "/", icon: LayoutDashboard },
     { name: t("navTrips"), href: "/trips", icon: Compass },
     { name: t("navOffers"), href: "/offers", icon: Layers },

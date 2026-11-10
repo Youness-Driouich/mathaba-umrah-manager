@@ -68,7 +68,7 @@ export function PwaRegistrar() {
   if (isInstalled) {
     return (
       <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full font-medium border border-emerald-200">
-        <CheckCircle className="w-3.5 h-3.5" /> App Installed
+        <CheckCircle className="w-3.5 h-3.5" /> تم التثبيت
       </span>
     );
   }
@@ -80,11 +80,11 @@ export function PwaRegistrar() {
   return (
     <button
       onClick={handleInstallClick}
-      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-emerald-700 text-white hover:bg-emerald-800 rounded-lg shadow-sm transition-all active:scale-95"
-      title="Install Mathaba Umrah Manager on your home screen or desktop"
+      className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-emerald-700 text-white hover:bg-emerald-800 rounded-lg shadow-xs transition-all active:scale-95"
+      title="تثبيت منصة مثابة لإدارة العمرة على حاسوبك أو شاشة هاتفك"
     >
       <Download className="w-3.5 h-3.5" />
-      <span>Install App</span>
+      <span>تثبيت التطبيق</span>
     </button>
   );
 }

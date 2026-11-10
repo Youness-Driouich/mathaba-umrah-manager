@@ -33,31 +33,31 @@ export function TopBar({
       </div>
 
       <div className="flex items-center gap-2.5">
-        {/* Language Switcher Pill */}
+        {/* زر تثبيت التطبيق PWA */}
+        <PwaRegistrar />
+
+        {/* مؤشر أسعار الصرف المرجعية */}
+        <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-700 font-medium">
+          <Globe className="w-3.5 h-3.5 text-emerald-600" />
+          <span>الريال: <strong className="text-slate-900 font-bold">2.70 د.م.</strong></span>
+          <span className="text-slate-300">|</span>
+          <span>اليورو: <strong className="text-slate-900 font-bold">10.85 د.م.</strong></span>
+        </div>
+
+        {/* زر التبديل اللغوي */}
         <button
           onClick={toggleLanguage}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 transition-colors cursor-pointer shadow-2xs"
-          title={language === "ar" ? "Switch to English" : "التحويل إلى العربية"}
+          title={language === "ar" ? "التبديل إلى الإنجليزية" : "Switch to Arabic"}
         >
           <Languages className="w-3.5 h-3.5 text-emerald-700" />
-          <span>{language === "ar" ? "English" : "العربية"}</span>
+          <span>{language === "ar" ? "عربي" : "EN"}</span>
         </button>
 
-        {/* PWA Install Button */}
-        <PwaRegistrar />
-
-        {/* Currency Rates Status Pill */}
-        <div className="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-xs text-slate-600">
-          <Globe className="w-3.5 h-3.5 text-emerald-600" />
-          <span>SAR/MAD: <strong>2.70</strong></span>
-          <span className="text-slate-300">|</span>
-          <span>EUR/MAD: <strong>10.85</strong></span>
-        </div>
-
-        {/* Administrator Badge */}
+        {/* شارة المدير العام */}
         <div className="flex items-center gap-2 pr-2 border-r border-slate-200 rtl:pr-2 rtl:border-r ltr:pl-2 ltr:border-l">
           <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-xs">
-            {language === "ar" ? "مدير" : "AD"}
+            مدير
           </div>
           <div className="hidden sm:block text-start text-xs">
             <p className="font-semibold text-slate-800">{t("adminBadge")}</p>

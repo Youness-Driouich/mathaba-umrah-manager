@@ -28,15 +28,15 @@ interface GlobalSettingsData {
 
 export default function GlobalSettingsPage() {
   const [formData, setFormData] = useState<GlobalSettingsData>({
-    agencyName: "Mathaba Umrah Services",
+    agencyName: "شركة مثابة لخدمات العمرة والأسفار",
     agencyEmail: "contact@mathaba.agency",
     agencyPhone: "+212 522 000 000",
-    agencyAddress: "Casablanca, Morocco",
+    agencyAddress: "الدار البيضاء، المغرب",
     defaultVisaCostSar: 525,
     sarToMadRate: 2.7,
     eurToMadRate: 10.85,
     documentFooterText: "شركة مثابة لخدمات العمرة والأسفار — معتمدون من وزارة السياحة والأوقاف",
-    quotationTerms: "صلاحية جواز السفر لا تقل عن 6 أشهر من تاريخ السفر.\nالأسعار شاملة لرسوم التأشيرة والضرائب المعمول بها.\nتخضع مواعيد الدخول والخروج لسياسات الفنادق المعتمدة بالمملكة العربية السعودية.",
+    quotationTerms: "صلاحية جواز السفر لا تقل عن 6 أشهر من تاريخ السفر.\nالأسعار شاملة لرسوم التأشيرة والضرائب المعمول بها بالمملكة العربية السعودية.\nتخضع مواعيد الدخول والخروج لسياسات الفنادق المعتمدة.",
   });
 
   const [loading, setLoading] = useState(true);
@@ -63,7 +63,7 @@ export default function GlobalSettingsPage() {
         });
       }
     } catch {
-      setMessage({ type: "error", text: "Failed to connect to Neon database." });
+      setMessage({ type: "error", text: "تعذر الاتصال بقاعدة البيانات لجلب الإعدادات." });
     } finally {
       setLoading(false);
     }
@@ -88,17 +88,17 @@ export default function GlobalSettingsPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Failed to save settings");
+        throw new Error(data.error || "فشل في حفظ الإعدادات");
       }
 
-      setMessage({ type: "success", text: "Global settings successfully updated in Neon PostgreSQL!" });
+      setMessage({ type: "success", text: "تم حفظ الإعدادات العامة للوكالة بنجاح!" });
       if (data.settings?.updatedAt) {
         setFormData((prev) => ({ ...prev, updatedAt: data.settings.updatedAt }));
       }
     } catch (err: unknown) {
       setMessage({
         type: "error",
-        text: err instanceof Error ? err.message : "Error saving settings.",
+        text: err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء حفظ الإعدادات.",
       });
     } finally {
       setSaving(false);
@@ -110,7 +110,7 @@ export default function GlobalSettingsPage() {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex items-center gap-3 text-slate-500 text-sm font-medium">
           <RefreshCw className="w-5 h-5 animate-spin text-emerald-600" />
-          <span>Loading global settings from Neon PostgreSQL...</span>
+          <span>جاري تحميل الإعدادات العامة للوكالة...</span>
         </div>
       </div>
     );
@@ -118,22 +118,22 @@ export default function GlobalSettingsPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      {/* Page Header */}
+      {/* رأس الصفحة */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
             <Settings className="w-6 h-6 text-emerald-700" />
-            <span>Global Agency Settings</span>
+            <span>الإعدادات العامة للوكالة</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Configure reference prices, default currency rates, and agency branding persisted in Neon PostgreSQL.
+            ضبط الأسعار المرجعية لرسوم التأشيرة وأسعار الصرف وهوية الوكالة الرسمية
           </p>
         </div>
 
         {formData.updatedAt && (
-          <div className="text-right text-[11px] text-slate-400">
-            Last synced: {new Date(formData.updatedAt).toLocaleDateString()} at{" "}
-            {new Date(formData.updatedAt).toLocaleTimeString()}
+          <div className="text-start sm:text-end text-[11px] text-slate-400">
+            آخر تحديث: {new Date(formData.updatedAt).toLocaleDateString("ar-MA")} في{" "}
+            {new Date(formData.updatedAt).toLocaleTimeString("ar-MA")}
           </div>
         )}
       </div>
@@ -155,30 +155,30 @@ export default function GlobalSettingsPage() {
         </div>
       )}
 
-      {/* Critical Business Notice Banner */}
+      {/* تنبيه قاعدة الحماية التاريخية */}
       <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs flex gap-3">
         <Info className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
         <div className="space-y-1">
-          <p className="font-bold">Historical Price Protection Rule:</p>
-          <p className="text-amber-800">
-            Reference exchange rates and visa fees configured here serve as <strong>starting defaults for new trips only</strong>.
-            Existing trips and finalized quotations preserve their historical snapshots and will never automatically drift when these global defaults change.
+          <p className="font-bold">قاعدة الحماية التاريخية لأسعار الرحلات:</p>
+          <p className="text-amber-800 leading-relaxed">
+            أسعار الصرف ورسوم التأشيرة المحددة هنا تُعد <strong>قيماً افتراضية تبدأ بها الرحلات الجديدة فقط</strong>.
+            الرحلات الحالية وعروض الأسعار المعتمدة تحتفظ بأسعارها التاريخية المحصنة ولن تتأثر إطلاقاً عند تعديل هذه الإعدادات العامة.
           </p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Section 1: Agency Brand & Identity */}
+        {/* القسم 1: هوية الوكالة وبيانات الاتصال */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Building className="w-4 h-4 text-emerald-700" />
-            <h2 className="font-bold text-sm text-slate-900">Agency Brand & Contact Details</h2>
+            <h2 className="font-bold text-sm text-slate-900">هوية الوكالة وبيانات الاتصال</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Agency Name
+                اسم وكالة الأسفار
               </label>
               <input
                 type="text"
@@ -186,12 +186,13 @@ export default function GlobalSettingsPage() {
                 value={formData.agencyName}
                 onChange={(e) => setFormData({ ...formData, agencyName: e.target.value })}
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                placeholder="شركة مثابة لخدمات العمرة"
               />
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Agency Official Email
+                البريد الإلكتروني الرسمي للوكالة
               </label>
               <input
                 type="email"
@@ -204,7 +205,7 @@ export default function GlobalSettingsPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Contact Phone / WhatsApp
+                رقم الهاتف / الواتساب
               </label>
               <input
                 type="text"
@@ -217,29 +218,29 @@ export default function GlobalSettingsPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Headquarters Address
+                عنوان المقر الرئيسي
               </label>
               <input
                 type="text"
                 value={formData.agencyAddress}
                 onChange={(e) => setFormData({ ...formData, agencyAddress: e.target.value })}
-                placeholder="Casablanca, Morocco"
+                placeholder="الدار البيضاء، المغرب"
                 className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
             </div>
           </div>
         </div>
 
-        {/* Section 2: Reference Visa Pricing */}
+        {/* القسم 2: تسعير التأشيرات المرجعي */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Coins className="w-4 h-4 text-emerald-700" />
-            <h2 className="font-bold text-sm text-slate-900">Reference Visa Pricing</h2>
+            <h2 className="font-bold text-sm text-slate-900">سعر التأشيرة المرجعي</h2>
           </div>
 
           <div className="max-w-md">
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Default Umrah Visa Fee (SAR per pilgrim)
+              رسوم تأشيرة العمرة الافتراضية (بالريال السعودي لكل معتمر)
             </label>
             <div className="relative">
               <input
@@ -254,26 +255,26 @@ export default function GlobalSettingsPage() {
                 className="w-full pl-3 pr-14 py-2 text-sm font-semibold text-slate-900 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                SAR
+                ر.س
               </span>
             </div>
             <p className="text-[11px] text-slate-500 mt-1">
-              Default baseline: 525.00 SAR per pilgrim. Automatically applied when initializing new Umrah trips.
+              السعر المرجعي الأساسي: 525.00 ريال سعودي لكل معتمر. يُطبق تلقائياً كقيمة أولية عند إنشاء رحلات جديدة.
             </p>
           </div>
         </div>
 
-        {/* Section 3: Reference Currency Rates */}
+        {/* القسم 3: أسعار الصرف المرجعية */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Globe className="w-4 h-4 text-emerald-700" />
-            <h2 className="font-bold text-sm text-slate-900">Reference Exchange Rates (to MAD)</h2>
+            <h2 className="font-bold text-sm text-slate-900">أسعار الصرف المرجعية (مقابل الدرهم المغربي)</h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                SAR / MAD Reference Rate
+                سعر صرف الريال السعودي (SAR / MAD)
               </label>
               <div className="relative">
                 <input
@@ -288,17 +289,17 @@ export default function GlobalSettingsPage() {
                   className="w-full pl-3 pr-14 py-2 text-sm font-semibold text-slate-900 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                  MAD
+                  د.م.
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-1">
-                1 Saudi Riyal (SAR) in Moroccan Dirhams (MAD).
+                قيمة 1 ريال سعودي بالدرهم المغربي (الافتراضي: 2.70 د.م.).
               </p>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                EUR / MAD Reference Rate
+                سعر صرف اليورو (EUR / MAD)
               </label>
               <div className="relative">
                 <input
@@ -313,27 +314,27 @@ export default function GlobalSettingsPage() {
                   className="w-full pl-3 pr-14 py-2 text-sm font-semibold text-slate-900 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                  MAD
+                  د.م.
                 </span>
               </div>
               <p className="text-[11px] text-slate-500 mt-1">
-                1 Euro (EUR) in Moroccan Dirhams (MAD).
+                قيمة 1 يورو بالدرهم المغربي (الافتراضي: 10.85 د.م.).
               </p>
             </div>
           </div>
         </div>
 
-        {/* Section 4: Document & Quotation Branding */}
+        {/* القسم 4: هوية الوثائق والشروط الرسمية */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
             <Info className="w-4 h-4 text-emerald-700" />
-            <h2 className="font-bold text-sm text-slate-900">Document Branding & Terms (عروض الأسعار والتقارير)</h2>
+            <h2 className="font-bold text-sm text-slate-900">هوية الوثائق والشروط الرسمية (عروض الأسعار والتقارير)</h2>
           </div>
 
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Official Document Footer Text (نص التذييل الرسمي في الوثائق)
+                نص التذييل الرسمي في الوثائق
               </label>
               <input
                 type="text"
@@ -349,23 +350,23 @@ export default function GlobalSettingsPage() {
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Standard Quotation Terms & Conditions (الشروط والأحكام الافتراضية لعروض المعتمرين)
+                الشروط والأحكام الافتراضية لعروض المعتمرين
               </label>
               <textarea
                 rows={3}
                 value={formData.quotationTerms || ""}
                 onChange={(e) => setFormData({ ...formData, quotationTerms: e.target.value })}
                 placeholder="شروط الجواز، التأشيرة، والإلغاء..."
-                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans"
+                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600 font-sans leading-relaxed"
               />
               <p className="text-[11px] text-slate-500 mt-1">
-                البنود والضوابط المطبوعة في عروض الأسعار الموجهة للمعتمرين.
+                البنود والضوابط المطبوعة تلقائياً في عروض الأسعار الرسمية الموجهة للمعتمرين.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Submit Button */}
+        {/* زر الحفظ */}
         <div className="flex justify-end pt-2">
           <button
             type="submit"
@@ -375,12 +376,12 @@ export default function GlobalSettingsPage() {
             {saving ? (
               <>
                 <RefreshCw className="w-4 h-4 animate-spin" />
-                <span>Saving to Neon...</span>
+                <span>جاري الحفظ...</span>
               </>
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                <span>Save Global Settings</span>
+                <span>حفظ الإعدادات العامة</span>
               </>
             )}
           </button>

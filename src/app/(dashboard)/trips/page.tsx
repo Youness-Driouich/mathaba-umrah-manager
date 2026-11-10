@@ -18,6 +18,8 @@ import {
   Globe,
   CheckCircle2,
   AlertCircle,
+  Layers,
+  ArrowRight,
 } from "lucide-react";
 import { TripStatus } from "@prisma/client";
 
@@ -65,7 +67,7 @@ export default function TripsDirectoryPage() {
         setTrips(data.trips);
       }
     } catch {
-      setNotification({ type: "error", text: "Failed to load trips from Neon." });
+      setNotification({ type: "error", text: "تعذر تحميل قائمة الرحلات من قاعدة البيانات." });
     } finally {
       setLoading(false);
     }
@@ -81,17 +83,17 @@ export default function TripsDirectoryPage() {
     try {
       const res = await fetch(`/api/trips/${id}/duplicate`, { method: "POST" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Duplication failed");
+      if (!res.ok) throw new Error(data.error || "فشل تكرار الرحلة");
 
       setNotification({
         type: "success",
-        text: `Trip "${name}" duplicated successfully. Historical isolation preserved!`,
+        text: `تم تكرار رحلة "${name}" بنجاح مع الحفاظ على الحماية التاريخية للأسعار!`,
       });
       fetchTrips();
     } catch (err: unknown) {
       setNotification({
         type: "error",
-        text: err instanceof Error ? err.message : "Error duplicating trip.",
+        text: err instanceof Error ? err.message : "حدث خطأ أثناء تكرار الرحلة.",
       });
     } finally {
       setActionLoadingId(null);
@@ -104,17 +106,17 @@ export default function TripsDirectoryPage() {
     try {
       const res = await fetch(`/api/trips/${id}/archive`, { method: "PATCH" });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Archive action failed");
+      if (!res.ok) throw new Error(data.error || "فشل تعديل حالة الأرشفة");
 
       setNotification({
         type: "success",
-        text: `Trip "${name}" archive status updated to ${data.status}.`,
+        text: `تم تحديث حالة أرشفة رحلة "${name}".`,
       });
       fetchTrips();
     } catch (err: unknown) {
       setNotification({
         type: "error",
-        text: err instanceof Error ? err.message : "Error archiving trip.",
+        text: err instanceof Error ? err.message : "حدث خطأ أثناء تغيير حالة الأرشفة.",
       });
     } finally {
       setActionLoadingId(null);
@@ -130,31 +132,31 @@ export default function TripsDirectoryPage() {
     return matchesStatus && matchesSearch;
   });
 
-  // Calculate statistics
+  // إحصائيات
   const totalPilgrims = trips.reduce((acc, t) => acc + (t.status !== "ARCHIVED" ? t.expectedPilgrims : 0), 0);
   const activeCount = trips.filter((t) => t.status === "ACTIVE").length;
   const draftCount = trips.filter((t) => t.status === "DRAFT").length;
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* رأس الصفحة */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2.5">
             <Compass className="w-6 h-6 text-emerald-700" />
-            <span>Umrah Trips Hub</span>
+            <span>رحلات العمرة</span>
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Manage trips, group bus allocations, flight costs, and exchange rate snapshots.
+            إدارة الرحلات وتواريخ السفر، تذاكر الطيران، وتوزيع تكاليف حافلات المجموعات
           </p>
         </div>
 
         <Link
           href="/trips/new"
-          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-all self-start sm:self-auto"
+          className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs rounded-xl shadow-xs transition-all self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>Create New Trip</span>
+          <span>إنشاء رحلة جديدة</span>
         </Link>
       </div>
 
@@ -175,74 +177,80 @@ export default function TripsDirectoryPage() {
         </div>
       )}
 
-      {/* KPI Stats Ribbon */}
+      {/* شريط المؤشرات الرئيسية */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-semibold text-slate-400 uppercase">Total Trips</span>
-          <div className="text-xl font-extrabold text-slate-900 mt-0.5">{trips.length}</div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[11px] font-semibold text-slate-400 uppercase">إجمالي الرحلات</span>
+          <div className="text-2xl font-black text-slate-900 mt-1">{trips.length}</div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-semibold text-emerald-600 uppercase">Active Trips</span>
-          <div className="text-xl font-extrabold text-emerald-700 mt-0.5">{activeCount}</div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[11px] font-semibold text-emerald-600 uppercase">رحلات نشطة</span>
+          <div className="text-2xl font-black text-emerald-700 mt-1">{activeCount}</div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-semibold text-slate-500 uppercase">Draft Trips</span>
-          <div className="text-xl font-extrabold text-slate-700 mt-0.5">{draftCount}</div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[11px] font-semibold text-slate-500 uppercase">قيد الإعداد (مسودة)</span>
+          <div className="text-2xl font-black text-slate-700 mt-1">{draftCount}</div>
         </div>
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
-          <span className="text-[11px] font-semibold text-blue-600 uppercase">Planned Pilgrims</span>
-          <div className="text-xl font-extrabold text-blue-700 mt-0.5">{totalPilgrims}</div>
+        <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
+          <span className="text-[11px] font-semibold text-blue-600 uppercase">المعتمرون المخطط لهم</span>
+          <div className="text-2xl font-black text-blue-700 mt-1">{totalPilgrims}</div>
         </div>
       </div>
 
-      {/* Search & Status Filters */}
-      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+      {/* شريط البحث والفلترة */}
+      <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-white p-3 rounded-2xl border border-slate-200 shadow-xs">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search trip name, airline, or notes..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            placeholder="بحث باسم الرحلة، شركة الطيران، أو الملاحظات..."
+            className="w-full pr-9 pl-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-slate-50 focus:bg-white transition-all"
           />
         </div>
 
         <div className="flex items-center gap-1 overflow-x-auto pb-1 md:pb-0 text-xs">
-          {["ALL", "DRAFT", "ACTIVE", "FINALIZED", "ARCHIVED"].map((status) => (
+          {[
+            { key: "ALL", label: `الكل (${trips.length})` },
+            { key: "ACTIVE", label: "نشطة" },
+            { key: "DRAFT", label: "مسودة" },
+            { key: "FINALIZED", label: "معتمدة" },
+            { key: "ARCHIVED", label: "مؤرشفة" },
+          ].map((item) => (
             <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-lg font-medium whitespace-nowrap transition-colors cursor-pointer ${
-                statusFilter === status
-                  ? "bg-emerald-700 text-white font-semibold"
+              key={item.key}
+              onClick={() => setStatusFilter(item.key)}
+              className={`px-3 py-1.5 rounded-xl font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                statusFilter === item.key
+                  ? "bg-emerald-700 text-white font-semibold shadow-xs"
                   : "text-slate-600 hover:bg-slate-100"
               }`}
             >
-              {status === "ALL" ? `All (${trips.length})` : status.charAt(0) + status.slice(1).toLowerCase()}
+              {item.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Trip Cards Grid */}
+      {/* شبكة بطاقات الرحلات */}
       {loading ? (
         <div className="p-16 text-center text-slate-400 text-sm flex items-center justify-center gap-2">
           <RefreshCw className="w-5 h-5 animate-spin text-emerald-600" />
-          <span>Loading Umrah trips from Neon PostgreSQL...</span>
+          <span>جاري تحميل رحلات العمرة...</span>
         </div>
       ) : filteredTrips.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center text-slate-500">
-          <Compass className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-          <p className="font-semibold text-slate-700">No trips found matching your filter.</p>
-          <p className="text-xs text-slate-400 mt-1">
-            Get started by creating your first trip for the upcoming season.
+          <Compass className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <p className="font-bold text-slate-800 text-sm">لا توجد رحلات تطابق البحث أو الفلتر المختار.</p>
+          <p className="text-xs text-slate-400 mt-1 max-w-md mx-auto">
+            ابدأ بإنشاء أول رحلة عمرة للموسم لربط تذاكر الطيران، حافلات المجموعات، والباقات الفندقية.
           </p>
           <Link
             href="/trips/new"
-            className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-emerald-700 text-white text-xs font-semibold rounded-lg hover:bg-emerald-800"
+            className="inline-flex items-center gap-1.5 mt-4 px-4 py-2 bg-emerald-700 text-white text-xs font-semibold rounded-xl hover:bg-emerald-800 transition-all shadow-xs"
           >
-            <Plus className="w-3.5 h-3.5" /> Create Trip
+            <Plus className="w-4 h-4" /> إنشاء رحلة جديدة
           </Link>
         </div>
       ) : (
@@ -265,7 +273,7 @@ export default function TripsDirectoryPage() {
                 className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between"
               >
                 <div>
-                  {/* Top Bar: Title & Status */}
+                  {/* رأس البطاقة: العنوان والحالة */}
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <h3 className="font-bold text-base text-slate-900 leading-snug">
@@ -274,10 +282,10 @@ export default function TripsDirectoryPage() {
                       <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
                         <span className="flex items-center gap-1 font-medium">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                          {start.toLocaleDateString()} ➔ {end.toLocaleDateString()}
+                          {start.toLocaleDateString("ar-MA")} ➔ {end.toLocaleDateString("ar-MA")}
                         </span>
                         <span className="text-slate-300">•</span>
-                        <span className="font-semibold text-emerald-700">{daysDiff} Days</span>
+                        <span className="font-bold text-emerald-700">{daysDiff} أيام</span>
                       </div>
                     </div>
 
@@ -290,91 +298,84 @@ export default function TripsDirectoryPage() {
                     </span>
                   </div>
 
-                  {/* Metrics Badges */}
+                  {/* شبكة المقاييس والتكاليف */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mt-4 pt-4 border-t border-slate-100 text-xs">
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                       <div className="text-[10px] text-slate-400 font-semibold uppercase flex items-center gap-1">
-                        <Users className="w-3 h-3" /> Pilgrims
+                        <Users className="w-3 h-3 text-emerald-600" /> سعة المعتمرين
                       </div>
                       <div className="font-extrabold text-sm text-slate-900 mt-0.5">
-                        {trip.expectedPilgrims} pax
+                        {trip.expectedPilgrims} معتمر
                       </div>
                     </div>
 
                     <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                       <div className="text-[10px] text-slate-400 font-semibold uppercase flex items-center gap-1">
-                        <Bus className="w-3 h-3" /> Group Bus
-                      </div>
-                      <div className="font-extrabold text-sm text-slate-900 mt-0.5">
-                        {busPerPerson.toFixed(1)} SAR
-                        <span className="text-[10px] text-slate-400 font-normal"> /pax</span>
-                      </div>
-                    </div>
-
-                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 col-span-2 sm:col-span-1">
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase flex items-center gap-1">
-                        <Plane className="w-3 h-3" /> Flight Cost
+                        <Plane className="w-3 h-3 text-blue-600" /> تذكرة الطيران
                       </div>
                       <div className="font-extrabold text-sm text-slate-900 mt-0.5">
                         {trip.flightCost.toLocaleString()} {trip.flightCurrency}
                       </div>
                     </div>
+
+                    <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase flex items-center gap-1">
+                        <Bus className="w-3 h-3 text-amber-600" /> نصيب الحافلة
+                      </div>
+                      <div className="font-extrabold text-sm text-slate-900 mt-0.5">
+                        {busPerPerson.toFixed(0)} ر.س / فرد
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Inherited Exchange Rates */}
-                  <div className="flex items-center gap-3 mt-3 px-3 py-1.5 rounded-lg bg-emerald-50/60 border border-emerald-100 text-[11px] text-emerald-900">
-                    <Globe className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-                    <span>Trip SAR/MAD: <strong>{trip.sarToMadRate}</strong></span>
-                    <span className="text-emerald-300">|</span>
-                    <span>EUR/MAD: <strong>{trip.eurToMadRate}</strong></span>
-                    <span className="text-emerald-300">|</span>
-                    <span className="text-emerald-700 font-semibold">{trip.offersCount} Packages</span>
+                  {/* معلومات إضافية */}
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-3 pt-3 border-t border-slate-50">
+                    <div className="flex items-center gap-1.5">
+                      <Globe className="w-3.5 h-3.5 text-slate-400" />
+                      <span>أسعار الصرف: الريال {trip.sarToMadRate} د.م. | اليورو {trip.eurToMadRate} د.م.</span>
+                    </div>
+                    <div className="flex items-center gap-1 font-semibold text-emerald-700">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>{trip.offersCount} باقات فندقية</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Actions Bar */}
-                <div className="flex items-center justify-between gap-2 mt-4 pt-4 border-t border-slate-100">
+                {/* أزرار الإجراءات */}
+                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleDuplicate(trip.id, trip.name)}
                       disabled={isBusy}
-                      className="p-1.5 text-xs text-slate-600 hover:text-emerald-800 hover:bg-slate-100 rounded-lg transition-colors flex items-center gap-1 border border-slate-200 cursor-pointer"
-                      title="Duplicate Trip (Preserves historical isolation)"
+                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                      title="نسخ وتكرار الرحلة"
                     >
-                      <Copy className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Duplicate</span>
+                      <Copy className="w-4 h-4" />
                     </button>
-
                     <button
                       onClick={() => handleToggleArchive(trip.id, trip.name)}
                       disabled={isBusy}
-                      className="p-1.5 text-xs text-slate-600 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors flex items-center gap-1 border border-slate-200 cursor-pointer"
-                      title={trip.status === "ARCHIVED" ? "Unarchive Trip" : "Archive Trip"}
+                      className="p-2 text-slate-500 hover:text-amber-800 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                      title={trip.status === "ARCHIVED" ? "تنشيط الرحلة" : "أرشفة الرحلة"}
                     >
-                      <Archive className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">
-                        {trip.status === "ARCHIVED" ? "Activate" : "Archive"}
-                      </span>
+                      <Archive className="w-4 h-4" />
                     </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
                     <Link
                       href={`/trips/${trip.id}/edit`}
-                      className="p-1.5 text-xs text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1 border border-slate-200"
+                      className="p-2 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="تعديل بيانات الرحلة"
                     >
-                      <Edit className="w-3.5 h-3.5" />
-                      <span>Edit</span>
-                    </Link>
-
-                    <Link
-                      href={`/trips/${trip.id}`}
-                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold rounded-lg flex items-center gap-1 shadow-2xs"
-                    >
-                      <span>Workspace</span>
-                      <ExternalLink className="w-3.5 h-3.5" />
+                      <Edit className="w-4 h-4" />
                     </Link>
                   </div>
+
+                  <Link
+                    href={`/trips/${trip.id}`}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                  >
+                    <span>فتح مساحة عمل الرحلة والباقات</span>
+                    <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                  </Link>
                 </div>
               </div>
             );
